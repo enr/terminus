@@ -66,6 +66,7 @@ type OSRelease struct {
 	PrettyName string
 	Version    string
 	VersionID  string
+	CodeName   string
 }
 
 // Kernel holds the kernel facts.
@@ -222,6 +223,27 @@ func (f *SystemFacts) getOSRelease(wg *sync.WaitGroup) {
 			}
 		}
 	}
+
+	lsbFile, err := os.Open("/etc/lsb-release")
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+	defer lsbFile.Close()
+
+	scanner = bufio.NewScanner(lsbFile)
+	for scanner.Scan() {
+		columns := strings.Split(scanner.Text(), "=")
+		if len(columns) > 1 {
+			key := columns[0]
+			value := strings.Trim(strings.TrimSpace(columns[1]), `"`)
+			switch key {
+			case "DISTRIB_CODENAME":
+				f.OSRelease.CodeName = value
+			}
+		}
+	}
+
 	return
 }
 
