@@ -49,8 +49,10 @@ type LoadAverage struct {
 
 // Date holds the date facts.
 type Date struct {
-	Unix int64
-	UTC  string
+	Unix     int64
+	UTC      string
+	Timezone string
+	Offset   int
 }
 
 // Swap holds the swap facts.
@@ -158,6 +160,7 @@ func (f *SystemFacts) getDate(wg *sync.WaitGroup) {
 	now := time.Now()
 	f.Date.Unix = now.Unix()
 	f.Date.UTC = now.UTC().String()
+	f.Date.Timezone, f.Date.Offset = now.Zone()
 
 	return
 }
