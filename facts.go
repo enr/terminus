@@ -45,6 +45,7 @@ type SystemFacts struct {
 	LoadAverage  LoadAverage
 	FileSystems  FileSystems
 	BlockDevices BlockDevices
+	Processors   Processors
 
 	mu sync.Mutex
 }
@@ -176,6 +177,25 @@ type BlockDevice struct {
 	TimeInQueue  int64
 }
 
+// Processors holds facts about the Processors / CPUs.
+type Processors struct {
+	Count     int
+	Processor []Processor
+}
+
+// Processor holds facts about a single Processor / CPU.
+type Processor struct {
+	VendorID  string
+	CPUFamily uint64
+	Model     uint64
+	ModelName string
+	MHz       string
+	CacheSize string
+	CPUCores  uint64
+	Flags     []string
+	BogoMips  float64
+}
+
 func getFacts() *facts.Facts {
 	f := facts.New()
 	systemFacts := getSystemFacts()
@@ -188,7 +208,7 @@ func getSystemFacts() *SystemFacts {
 	facts := new(SystemFacts)
 	var wg sync.WaitGroup
 
-	wg.Add(10)
+	wg.Add(11)
 	go facts.getOSRelease(&wg)
 	go facts.getInterfaces(&wg)
 	go facts.getBootID(&wg)
@@ -199,6 +219,7 @@ func getSystemFacts() *SystemFacts {
 	go facts.getFileSystems(&wg)
 	go facts.getDMI(&wg)
 	go facts.getBlockDevices(&wg)
+	go facts.getProcessors(&wg)
 
 	wg.Wait()
 	return facts
@@ -661,6 +682,66 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 	}
 
 	f.BlockDevices = bdMap
+
+	return
+}
+
+func (f *SystemFacts) getProcessors(wg *sync.WaitGroup) {
+	defer wg.Done()
+	processorFile, err := os.Open("/proc/cpuinfo")
+	if err != nil {
+		if debug {
+			log.Println(err.Error())
+		}
+		return
+	}
+	defer processorFile.Close()
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	var cpuCount int = 0
+	procs := []Processor{}
+	p := Processor{}
+
+	scanner := bufio.NewScanner(processorFile)
+	for scanner.Scan() {
+		columns := strings.Split(scanner.Text(), ":")
+		if len(columns) > 1 {
+			key := strings.TrimSpace(columns[0])
+			value := strings.TrimSpace(columns[1])
+
+			switch key {
+			case "processor":
+				cpuCount += 1
+			case "vendor_id":
+				p.VendorID = value
+			case "cpu family":
+				p.CPUFamily, _ = strconv.ParseUint(value, 10, 64)
+			case "model":
+				p.Model, _ = strconv.ParseUint(value, 10, 64)
+			case "model name":
+				p.ModelName = value
+			case "cpu MHz":
+				p.MHz = value
+			case "cache size":
+				p.CacheSize = value
+			case "cpu cores":
+				p.CPUCores, _ = strconv.ParseUint(value, 10, 64)
+			case "flags":
+				value := strings.Fields(columns[1])
+				p.Flags = value
+			case "bogomips":
+				p.BogoMips, _ = strconv.ParseFloat(value, 64)
+			}
+		} else {
+			procs = append(procs, p)
+			p = Processor{}
+		}
+	}
+
+	f.Processors.Count = cpuCount
+	f.Processors.Processor = procs
 
 	return
 }
