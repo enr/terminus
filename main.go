@@ -83,14 +83,17 @@ func main() {
 		path_pieces := strings.Split(path, ".")
 
 		// Convert the Fact structure into a generic interface{}
-		// by first converting it to JSON and then unmarshaling it.
+		// by first converting it to JSON and then decoding it.
 		j, err := json.Marshal(&f.Facts)
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = json.Unmarshal(j, &data)
-		if err != nil {
+
+		d := json.NewDecoder(strings.NewReader(string(j)))
+		d.UseNumber()
+		if err := d.Decode(&data); err != nil {
 			log.Fatal(err)
+			os.Exit(1)
 		}
 
 		// Walk through the given path.
