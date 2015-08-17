@@ -31,6 +31,7 @@ const (
 type SystemFacts struct {
 	Architecture string
 	BootID       string
+	DMI          DMI
 	Date         Date
 	Domainname   string
 	Hostname     string
@@ -45,6 +46,23 @@ type SystemFacts struct {
 	FileSystems  FileSystems
 
 	mu sync.Mutex
+}
+
+// DMI holds the DMI / Hardware Information.
+type DMI struct {
+	BIOSDate        string
+	BIOSVendor      string
+	BIOSVersion     string
+	ChassisAssetTag string
+	ChassisSerial   string
+	ChassisType     string
+	ChassisVendor   string
+	ChassisVersion  string
+	ProductName     string
+	ProductSerial   string
+	ProductUUID     string
+	ProductVersion  string
+	SysVendor       string
 }
 
 // Holds the load average facts.
@@ -148,7 +166,7 @@ func getSystemFacts() *SystemFacts {
 	facts := new(SystemFacts)
 	var wg sync.WaitGroup
 
-	wg.Add(8)
+	wg.Add(9)
 	go facts.getOSRelease(&wg)
 	go facts.getInterfaces(&wg)
 	go facts.getBootID(&wg)
@@ -157,6 +175,7 @@ func getSystemFacts() *SystemFacts {
 	go facts.getSysInfo(&wg)
 	go facts.getDate(&wg)
 	go facts.getFileSystems(&wg)
+	go facts.getDMI(&wg)
 
 	wg.Wait()
 	return facts
@@ -420,6 +439,87 @@ func (f *SystemFacts) getFileSystems(wg *sync.WaitGroup) {
 	return
 }
 
+func (f *SystemFacts) getDMI(wg *sync.WaitGroup) {
+	defer wg.Done()
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	var err error
+	f.DMI.BIOSDate, err = readFileAndReturnValue("/sys/class/dmi/id/bios_date")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.BIOSVendor, err = readFileAndReturnValue("/sys/class/dmi/id/bios_vendor")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.BIOSVersion, err = readFileAndReturnValue("/sys/class/dmi/id/bios_version")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ChassisAssetTag, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ChassisSerial, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_serial")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ChassisVendor, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_vendor")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ChassisVersion, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_version")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ProductName, err = readFileAndReturnValue("/sys/class/dmi/id/product_name")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ProductSerial, err = readFileAndReturnValue("/sys/class/dmi/id/product_serial")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ProductUUID, err = readFileAndReturnValue("/sys/class/dmi/id/product_uuid")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.ProductVersion, err = readFileAndReturnValue("/sys/class/dmi/id/product_version")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	f.DMI.SysVendor, err = readFileAndReturnValue("/sys/class/dmi/id/sys_vendor")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	return
+}
+
 func processExternalFacts(dir string, f *facts.Facts) {
 	d, err := os.Open(dir)
 	if err != nil {
@@ -511,4 +611,18 @@ func charsToString(ca [65]int8) string {
 		s[lens] = uint8(ca[lens])
 	}
 	return string(s[0:lens])
+}
+
+func readFileAndReturnValue(fileName string) (string, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(data)), nil
 }
