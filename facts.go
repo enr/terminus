@@ -162,19 +162,19 @@ type BlockDevices map[string]BlockDevice
 // BlockDevice holds facts for a block device
 type BlockDevice struct {
 	Device       string
-	Size         int64
+	Size         uint64
 	Vendor       string
-	ReadIOs      int64
-	ReadMerges   int64
-	ReadSectors  int64
-	ReadTicks    int64
-	WriteIOs     int64
-	WriteMerges  int64
-	WriteSectors int64
-	WriteTicks   int64
-	InFlight     int64
-	IOTicks      int64
-	TimeInQueue  int64
+	ReadIOs      uint64
+	ReadMerges   uint64
+	ReadSectors  uint64
+	ReadTicks    uint64
+	WriteIOs     uint64
+	WriteMerges  uint64
+	WriteSectors uint64
+	WriteTicks   uint64
+	InFlight     uint64
+	IOTicks      uint64
+	TimeInQueue  uint64
 }
 
 // Processors holds facts about the Processors / CPUs.
@@ -641,7 +641,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 				return
 			}
 
-			bd.Size, _ = strconv.ParseInt(size, 10, 64)
+			bd.Size, _ = strconv.ParseUint(size, 10, 64)
 
 			vendorPath := fmt.Sprintf("/sys/block/%s/device/vendor", fi.Name())
 			if bd.Vendor, err = readFileAndReturnValue(vendorPath); err != nil {
@@ -664,17 +664,17 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			for scanner.Scan() {
 				columns := strings.Fields(scanner.Text())
 				if len(columns) == 11 {
-					bd.ReadIOs, _ = strconv.ParseInt(columns[0], 10, 64)
-					bd.ReadMerges, _ = strconv.ParseInt(columns[1], 10, 64)
-					bd.ReadSectors, _ = strconv.ParseInt(columns[2], 10, 64)
-					bd.ReadTicks, _ = strconv.ParseInt(columns[3], 10, 64)
-					bd.WriteIOs, _ = strconv.ParseInt(columns[4], 10, 64)
-					bd.WriteMerges, _ = strconv.ParseInt(columns[5], 10, 64)
-					bd.WriteSectors, _ = strconv.ParseInt(columns[6], 10, 64)
-					bd.WriteTicks, _ = strconv.ParseInt(columns[7], 10, 64)
-					bd.InFlight, _ = strconv.ParseInt(columns[8], 10, 64)
-					bd.IOTicks, _ = strconv.ParseInt(columns[9], 10, 64)
-					bd.TimeInQueue, _ = strconv.ParseInt(columns[10], 10, 64)
+					bd.ReadIOs, _ = strconv.ParseUint(columns[0], 10, 64)
+					bd.ReadMerges, _ = strconv.ParseUint(columns[1], 10, 64)
+					bd.ReadSectors, _ = strconv.ParseUint(columns[2], 10, 64)
+					bd.ReadTicks, _ = strconv.ParseUint(columns[3], 10, 64)
+					bd.WriteIOs, _ = strconv.ParseUint(columns[4], 10, 64)
+					bd.WriteMerges, _ = strconv.ParseUint(columns[5], 10, 64)
+					bd.WriteSectors, _ = strconv.ParseUint(columns[6], 10, 64)
+					bd.WriteTicks, _ = strconv.ParseUint(columns[7], 10, 64)
+					bd.InFlight, _ = strconv.ParseUint(columns[8], 10, 64)
+					bd.IOTicks, _ = strconv.ParseUint(columns[9], 10, 64)
+					bd.TimeInQueue, _ = strconv.ParseUint(columns[10], 10, 64)
 				}
 			}
 			bdMap[bd.Device] = bd
