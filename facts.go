@@ -44,6 +44,7 @@ type SystemFacts struct {
 	Uptime       int64
 	LoadAverage  LoadAverage
 	FileSystems  FileSystems
+	BlockDevices BlockDevices
 
 	mu sync.Mutex
 }
@@ -154,6 +155,27 @@ type FileSystem struct {
 	PassNo     uint64
 }
 
+// BlockDevices holds the BlockDevice facts.
+type BlockDevices map[string]BlockDevice
+
+// BlockDevice holds facts for a block device
+type BlockDevice struct {
+	Device       string
+	Size         int64
+	Vendor       string
+	ReadIOs      int64
+	ReadMerges   int64
+	ReadSectors  int64
+	ReadTicks    int64
+	WriteIOs     int64
+	WriteMerges  int64
+	WriteSectors int64
+	WriteTicks   int64
+	InFlight     int64
+	IOTicks      int64
+	TimeInQueue  int64
+}
+
 func getFacts() *facts.Facts {
 	f := facts.New()
 	systemFacts := getSystemFacts()
@@ -166,7 +188,7 @@ func getSystemFacts() *SystemFacts {
 	facts := new(SystemFacts)
 	var wg sync.WaitGroup
 
-	wg.Add(9)
+	wg.Add(10)
 	go facts.getOSRelease(&wg)
 	go facts.getInterfaces(&wg)
 	go facts.getBootID(&wg)
@@ -176,6 +198,7 @@ func getSystemFacts() *SystemFacts {
 	go facts.getDate(&wg)
 	go facts.getFileSystems(&wg)
 	go facts.getDMI(&wg)
+	go facts.getBlockDevices(&wg)
 
 	wg.Wait()
 	return facts
@@ -566,6 +589,90 @@ func (f *SystemFacts) getDMI(wg *sync.WaitGroup) {
 		}
 		return
 	}
+
+	return
+}
+
+func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	d, err := os.Open("/sys/block")
+	if err != nil {
+		if debug {
+			log.Println(err)
+		}
+		return
+	}
+	defer d.Close()
+
+	files, err := d.Readdir(0)
+	if err != nil {
+		if debug {
+			log.Println(err)
+		}
+		return
+	}
+
+	bdMap := make(BlockDevices)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	for _, fi := range files {
+		path := fmt.Sprintf("/sys/block/%s/device", fi.Name())
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			bd := BlockDevice{}
+			bd.Device = fi.Name()
+
+			sizePath := fmt.Sprintf("/sys/block/%s/size", fi.Name())
+			size, err := readFileAndReturnValue(sizePath)
+			if err != nil {
+				if debug {
+					log.Println(err)
+				}
+				return
+			}
+
+			bd.Size, _ = strconv.ParseInt(size, 10, 64)
+
+			vendorPath := fmt.Sprintf("/sys/block/%s/device/vendor", fi.Name())
+			if bd.Vendor, err = readFileAndReturnValue(vendorPath); err != nil {
+				if debug {
+					log.Println(err)
+				}
+				return
+			}
+
+			statPath := fmt.Sprintf("/sys/block/%s/stat", fi.Name())
+			sf, err := os.Open(statPath)
+			if err != nil {
+				if debug {
+					log.Println(err)
+				}
+			}
+			defer sf.Close()
+
+			scanner := bufio.NewScanner(sf)
+			for scanner.Scan() {
+				columns := strings.Fields(scanner.Text())
+				if len(columns) == 11 {
+					bd.ReadIOs, _ = strconv.ParseInt(columns[0], 10, 64)
+					bd.ReadMerges, _ = strconv.ParseInt(columns[1], 10, 64)
+					bd.ReadSectors, _ = strconv.ParseInt(columns[2], 10, 64)
+					bd.ReadTicks, _ = strconv.ParseInt(columns[3], 10, 64)
+					bd.WriteIOs, _ = strconv.ParseInt(columns[4], 10, 64)
+					bd.WriteMerges, _ = strconv.ParseInt(columns[5], 10, 64)
+					bd.WriteSectors, _ = strconv.ParseInt(columns[6], 10, 64)
+					bd.WriteTicks, _ = strconv.ParseInt(columns[7], 10, 64)
+					bd.InFlight, _ = strconv.ParseInt(columns[8], 10, 64)
+					bd.IOTicks, _ = strconv.ParseInt(columns[9], 10, 64)
+					bd.TimeInQueue, _ = strconv.ParseInt(columns[10], 10, 64)
+				}
+			}
+			bdMap[bd.Device] = bd
+		}
+	}
+
+	f.BlockDevices = bdMap
 
 	return
 }
