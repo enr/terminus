@@ -471,96 +471,84 @@ func (f *SystemFacts) getDMI(wg *sync.WaitGroup) {
 	defer f.mu.Unlock()
 
 	var err error
-	f.DMI.BIOSDate, err = readFileAndReturnValue("/sys/class/dmi/id/bios_date")
-	if err != nil {
+	if f.DMI.BIOSDate, err = readFileAndReturnValue("/sys/class/dmi/id/bios_date"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.BIOSVendor, err = readFileAndReturnValue("/sys/class/dmi/id/bios_vendor")
-	if err != nil {
+	if f.DMI.BIOSVendor, err = readFileAndReturnValue("/sys/class/dmi/id/bios_vendor"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.BIOSVersion, err = readFileAndReturnValue("/sys/class/dmi/id/bios_version")
-	if err != nil {
+	if f.DMI.BIOSVersion, err = readFileAndReturnValue("/sys/class/dmi/id/bios_version"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ChassisAssetTag, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag")
-	if err != nil {
+	if f.DMI.ChassisAssetTag, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ChassisSerial, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_serial")
-	if err != nil {
+	if f.DMI.ChassisSerial, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_serial"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ChassisVendor, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_vendor")
-	if err != nil {
+	if f.DMI.ChassisVendor, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_vendor"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ChassisVersion, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_version")
-	if err != nil {
+	if f.DMI.ChassisVersion, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_version"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ProductName, err = readFileAndReturnValue("/sys/class/dmi/id/product_name")
-	if err != nil {
+	if f.DMI.ProductName, err = readFileAndReturnValue("/sys/class/dmi/id/product_name"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ProductSerial, err = readFileAndReturnValue("/sys/class/dmi/id/product_serial")
-	if err != nil {
+	if f.DMI.ProductSerial, err = readFileAndReturnValue("/sys/class/dmi/id/product_serial"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ProductUUID, err = readFileAndReturnValue("/sys/class/dmi/id/product_uuid")
-	if err != nil {
+	if f.DMI.ProductUUID, err = readFileAndReturnValue("/sys/class/dmi/id/product_uuid"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.ProductVersion, err = readFileAndReturnValue("/sys/class/dmi/id/product_version")
-	if err != nil {
+	if f.DMI.ProductVersion, err = readFileAndReturnValue("/sys/class/dmi/id/product_version"); err != nil {
 		if debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	f.DMI.SysVendor, err = readFileAndReturnValue("/sys/class/dmi/id/sys_vendor")
-	if err != nil {
+	if f.DMI.SysVendor, err = readFileAndReturnValue("/sys/class/dmi/id/sys_vendor"); err != nil {
 		if debug {
 			log.Println(err)
 		}
