@@ -198,8 +198,10 @@ type Processor struct {
 
 func getFacts() *facts.Facts {
 	f := facts.New()
-	systemFacts := getSystemFacts()
-	f.Add("System", systemFacts)
+	if path == "" || (path != "" && strings.Contains(path, "System")) {
+		systemFacts := getSystemFacts()
+		f.Add("System", systemFacts)
+	}
 	processExternalFacts(externalFactsDir, f)
 	return f
 }
@@ -768,13 +770,16 @@ func processExternalFacts(dir string, f *facts.Facts) {
 	staticFacts := make([]string, 0)
 
 	for _, fi := range files {
-		name := filepath.Join(dir, fi.Name())
-		if isExecutable(fi) {
-			executableFacts = append(executableFacts, name)
-			continue
-		}
-		if strings.HasSuffix(name, ".json") {
-			staticFacts = append(staticFacts, name)
+		fact := strings.TrimSuffix(fi.Name(), ".json")
+		if path == "" || (path != "" && strings.Contains(path, fact)) {
+			name := filepath.Join(dir, fi.Name())
+			if isExecutable(fi) {
+				executableFacts = append(executableFacts, name)
+				continue
+			}
+			if strings.HasSuffix(name, ".json") {
+				staticFacts = append(staticFacts, name)
+			}
 		}
 	}
 

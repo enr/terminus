@@ -19,6 +19,10 @@ var (
 	httpAddr         string
 	printVersion     bool
 	debug            bool
+	path             string
+	data             interface{}
+	value            interface{}
+	path_pieces      []string
 )
 
 func init() {
@@ -44,15 +48,15 @@ func main() {
 		log.Fatal(http.ListenAndServe(httpAddr, nil))
 	}
 
-	f := getFacts()
-
 	// If there are arguments left over, use the first argument as a fact query.
 	if len(flag.Args()) > 0 {
-		var data interface{}
-		var value interface{}
-		path := flag.Args()[0]
-		path_pieces := strings.Split(path, ".")
+		path = flag.Args()[0]
+		path_pieces = strings.Split(path, ".")
+	}
 
+	f := getFacts()
+
+	if path != "" {
 		// Convert the Fact structure into a generic interface{}
 		// by first converting it to JSON and then decoding it.
 		j, err := json.Marshal(&f.Facts)
