@@ -1,3 +1,4 @@
+// Copyright (c) 2015 Joe Topjian. All rights reserved.
 // Copyright (c) 2014 Kelsey Hightower. All rights reserved.
 // Use of this source code is governed by the Apache License, Version 2.0
 // that can be found in the LICENSE file.
@@ -10,8 +11,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/jtopjian/terminus/config"
+	"github.com/jtopjian/terminus/facts"
+	"github.com/jtopjian/terminus/facts/linux"
 )
 
 var (
@@ -112,4 +118,21 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("%s\n", data)
+}
+
+func getFacts() *facts.Facts {
+	c := config.Config{
+		ExternalFactsDir: externalFactsDir,
+		Path:             path,
+		Debug:            debug,
+	}
+	f := facts.New()
+	switch goos := runtime.GOOS; goos {
+	case "linux":
+		f = linux.GetFacts(c)
+	default:
+		fmt.Printf("OS %s is not supported.\n", goos)
+		os.Exit(1)
+	}
+	return f
 }
