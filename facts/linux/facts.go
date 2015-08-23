@@ -1,22 +1,20 @@
-package main
+package linux
 
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/kelseyhightower/terminus/facts"
+	"github.com/jtopjian/terminus/config"
+	"github.com/jtopjian/terminus/facts"
 	"golang.org/x/sys/unix"
 )
 
@@ -25,6 +23,11 @@ const (
 	// LINUX_SYSINFO_LOADS_SCALE has been described elsewhere as a "magic" number.
 	// It reverts the calculation of "load << (SI_LOAD_SHIFT - FSHIFT)" done in the original load calculation.
 	LINUX_SYSINFO_LOADS_SCALE float64 = 65536.0
+)
+
+// Vars
+var (
+	c config.Config
 )
 
 // SystemFacts holds the system facts.
@@ -196,13 +199,14 @@ type Processor struct {
 	BogoMips  float64
 }
 
-func getFacts() *facts.Facts {
+func GetFacts(cfg config.Config) *facts.Facts {
+	c = cfg
 	f := facts.New()
-	if path == "" || (path != "" && strings.Contains(path, "System")) {
+	if c.Path == "" || (c.Path != "" && strings.Contains(c.Path, "System")) {
 		systemFacts := getSystemFacts()
 		f.Add("System", systemFacts)
 	}
-	processExternalFacts(externalFactsDir, f)
+	facts.ProcessExternalFacts(c, f)
 	return f
 }
 
@@ -243,7 +247,7 @@ func (f *SystemFacts) getSysInfo(wg *sync.WaitGroup) {
 
 	var info unix.Sysinfo_t
 	if err := unix.Sysinfo(&info); err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -273,7 +277,7 @@ func (f *SystemFacts) getOSRelease(wg *sync.WaitGroup) {
 	defer wg.Done()
 	osReleaseFile, err := os.Open("/etc/os-release")
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -305,7 +309,7 @@ func (f *SystemFacts) getOSRelease(wg *sync.WaitGroup) {
 
 	lsbFile, err := os.Open("/etc/lsb-release")
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -332,7 +336,7 @@ func (f *SystemFacts) getMachineID(wg *sync.WaitGroup) {
 	defer wg.Done()
 	machineIDFile, err := os.Open("/etc/machine-id")
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -340,7 +344,7 @@ func (f *SystemFacts) getMachineID(wg *sync.WaitGroup) {
 	defer machineIDFile.Close()
 	data, err := ioutil.ReadAll(machineIDFile)
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -357,7 +361,7 @@ func (f *SystemFacts) getBootID(wg *sync.WaitGroup) {
 	defer wg.Done()
 	bootIDFile, err := os.Open("/proc/sys/kernel/random/boot_id")
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -365,7 +369,7 @@ func (f *SystemFacts) getBootID(wg *sync.WaitGroup) {
 	defer bootIDFile.Close()
 	data, err := ioutil.ReadAll(bootIDFile)
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -382,7 +386,7 @@ func (f *SystemFacts) getInterfaces(wg *sync.WaitGroup) {
 	defer wg.Done()
 	ls, err := net.Interfaces()
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -399,7 +403,7 @@ func (f *SystemFacts) getInterfaces(wg *sync.WaitGroup) {
 
 		addrs, err := i.Addrs()
 		if err != nil {
-			if debug {
+			if c.Debug {
 				log.Println(err.Error())
 			}
 			return
@@ -440,7 +444,7 @@ func (f *SystemFacts) getUname(wg *sync.WaitGroup) {
 	var buf unix.Utsname
 	err := unix.Uname(&buf)
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -449,12 +453,12 @@ func (f *SystemFacts) getUname(wg *sync.WaitGroup) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	f.Domainname = charsToString(buf.Domainname)
-	f.Architecture = charsToString(buf.Machine)
-	f.Hostname = charsToString(buf.Nodename)
-	f.Kernel.Name = charsToString(buf.Sysname)
-	f.Kernel.Release = charsToString(buf.Release)
-	f.Kernel.Version = charsToString(buf.Version)
+	f.Domainname = facts.CharsToString(buf.Domainname)
+	f.Architecture = facts.CharsToString(buf.Machine)
+	f.Hostname = facts.CharsToString(buf.Nodename)
+	f.Kernel.Name = facts.CharsToString(buf.Sysname)
+	f.Kernel.Release = facts.CharsToString(buf.Release)
+	f.Kernel.Version = facts.CharsToString(buf.Version)
 	return
 }
 
@@ -463,7 +467,7 @@ func (f *SystemFacts) getFileSystems(wg *sync.WaitGroup) {
 
 	mtab, err := ioutil.ReadFile("/etc/mtab")
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -488,7 +492,7 @@ func (f *SystemFacts) getFileSystems(wg *sync.WaitGroup) {
 		fs.Options = strings.Split(fields[3], ",")
 		dumpFreq, err := strconv.ParseUint(fields[4], 10, 64)
 		if err != nil {
-			if debug {
+			if c.Debug {
 				log.Println(err.Error())
 			}
 			return
@@ -497,7 +501,7 @@ func (f *SystemFacts) getFileSystems(wg *sync.WaitGroup) {
 
 		passNo, err := strconv.ParseUint(fields[4], 10, 64)
 		if err != nil {
-			if debug {
+			if c.Debug {
 				log.Println(err.Error())
 			}
 			return
@@ -517,85 +521,85 @@ func (f *SystemFacts) getDMI(wg *sync.WaitGroup) {
 	defer f.mu.Unlock()
 
 	var err error
-	if f.DMI.BIOSDate, err = readFileAndReturnValue("/sys/class/dmi/id/bios_date"); err != nil {
-		if debug {
+	if f.DMI.BIOSDate, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/bios_date"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.BIOSVendor, err = readFileAndReturnValue("/sys/class/dmi/id/bios_vendor"); err != nil {
-		if debug {
+	if f.DMI.BIOSVendor, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/bios_vendor"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.BIOSVersion, err = readFileAndReturnValue("/sys/class/dmi/id/bios_version"); err != nil {
-		if debug {
+	if f.DMI.BIOSVersion, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/bios_version"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisAssetTag, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag"); err != nil {
-		if debug {
+	if f.DMI.ChassisAssetTag, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisSerial, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_serial"); err != nil {
-		if debug {
+	if f.DMI.ChassisSerial, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_serial"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisVendor, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_vendor"); err != nil {
-		if debug {
+	if f.DMI.ChassisVendor, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_vendor"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisVersion, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_version"); err != nil {
-		if debug {
+	if f.DMI.ChassisVersion, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_version"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductName, err = readFileAndReturnValue("/sys/class/dmi/id/product_name"); err != nil {
-		if debug {
+	if f.DMI.ProductName, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_name"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductSerial, err = readFileAndReturnValue("/sys/class/dmi/id/product_serial"); err != nil {
-		if debug {
+	if f.DMI.ProductSerial, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_serial"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductUUID, err = readFileAndReturnValue("/sys/class/dmi/id/product_uuid"); err != nil {
-		if debug {
+	if f.DMI.ProductUUID, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_uuid"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductVersion, err = readFileAndReturnValue("/sys/class/dmi/id/product_version"); err != nil {
-		if debug {
+	if f.DMI.ProductVersion, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_version"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.SysVendor, err = readFileAndReturnValue("/sys/class/dmi/id/sys_vendor"); err != nil {
-		if debug {
+	if f.DMI.SysVendor, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/sys_vendor"); err != nil {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
@@ -609,7 +613,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 
 	d, err := os.Open("/sys/block")
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
@@ -618,7 +622,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 
 	files, err := d.Readdir(0)
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err)
 		}
 		return
@@ -635,9 +639,9 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			bd.Device = fi.Name()
 
 			sizePath := fmt.Sprintf("/sys/block/%s/size", fi.Name())
-			size, err := readFileAndReturnValue(sizePath)
+			size, err := facts.ReadFileAndReturnValue(sizePath)
 			if err != nil {
-				if debug {
+				if c.Debug {
 					log.Println(err)
 				}
 				return
@@ -646,8 +650,8 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			bd.Size, _ = strconv.ParseUint(size, 10, 64)
 
 			vendorPath := fmt.Sprintf("/sys/block/%s/device/vendor", fi.Name())
-			if bd.Vendor, err = readFileAndReturnValue(vendorPath); err != nil {
-				if debug {
+			if bd.Vendor, err = facts.ReadFileAndReturnValue(vendorPath); err != nil {
+				if c.Debug {
 					log.Println(err)
 				}
 				return
@@ -656,7 +660,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			statPath := fmt.Sprintf("/sys/block/%s/stat", fi.Name())
 			sf, err := os.Open(statPath)
 			if err != nil {
-				if debug {
+				if c.Debug {
 					log.Println(err)
 				}
 			}
@@ -692,7 +696,7 @@ func (f *SystemFacts) getProcessors(wg *sync.WaitGroup) {
 	defer wg.Done()
 	processorFile, err := os.Open("/proc/cpuinfo")
 	if err != nil {
-		if debug {
+		if c.Debug {
 			log.Println(err.Error())
 		}
 		return
@@ -746,126 +750,4 @@ func (f *SystemFacts) getProcessors(wg *sync.WaitGroup) {
 	f.Processors.Processor = procs
 
 	return
-}
-
-func processExternalFacts(dir string, f *facts.Facts) {
-	d, err := os.Open(dir)
-	if err != nil {
-		if debug {
-			log.Println(err)
-		}
-		return
-	}
-	defer d.Close()
-
-	files, err := d.Readdir(0)
-	if err != nil {
-		if debug {
-			log.Println(err)
-		}
-		return
-	}
-
-	executableFacts := make([]string, 0)
-	staticFacts := make([]string, 0)
-
-	for _, fi := range files {
-		fact := strings.TrimSuffix(fi.Name(), ".json")
-		if path == "" || (path != "" && strings.Contains(path, fact)) {
-			name := filepath.Join(dir, fi.Name())
-			if isExecutable(fi) {
-				executableFacts = append(executableFacts, name)
-				continue
-			}
-			if strings.HasSuffix(name, ".json") {
-				staticFacts = append(staticFacts, name)
-			}
-		}
-	}
-
-	var wg sync.WaitGroup
-	for _, p := range staticFacts {
-		p := p
-		wg.Add(1)
-		go factsFromFile(p, f, &wg)
-	}
-	for _, p := range executableFacts {
-		p := p
-		wg.Add(1)
-		go factsFromExec(p, f, &wg)
-	}
-	wg.Wait()
-}
-
-func factsFromFile(path string, f *facts.Facts, wg *sync.WaitGroup) {
-	defer wg.Done()
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		if debug {
-			log.Println(err)
-		}
-		return
-	}
-	var result interface{}
-	err = json.Unmarshal(data, &result)
-	if err != nil {
-		if debug {
-			log.Println(err)
-		}
-		return
-	}
-	f.Add(strings.TrimSuffix(filepath.Base(path), ".json"), result)
-}
-
-func factsFromExec(path string, f *facts.Facts, wg *sync.WaitGroup) {
-	defer wg.Done()
-	out, err := exec.Command(path).Output()
-	if err != nil {
-		if debug {
-			log.Println(err)
-		}
-		return
-	}
-	var result interface{}
-	err = json.Unmarshal(out, &result)
-	if err != nil {
-		if debug {
-			log.Println(err)
-		}
-		return
-	}
-	f.Add(filepath.Base(path), result)
-}
-
-func isExecutable(fi os.FileInfo) bool {
-	if m := fi.Mode(); !m.IsDir() && m&0111 != 0 {
-		return true
-	}
-	return false
-}
-
-func charsToString(ca [65]int8) string {
-	s := make([]byte, len(ca))
-	var lens int
-	for ; lens < len(ca); lens++ {
-		if ca[lens] == 0 {
-			break
-		}
-		s[lens] = uint8(ca[lens])
-	}
-	return string(s[0:lens])
-}
-
-func readFileAndReturnValue(fileName string) (string, error) {
-	file, err := os.Open(fileName)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(string(data)), nil
 }
