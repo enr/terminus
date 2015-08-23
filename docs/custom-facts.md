@@ -8,7 +8,7 @@ Executable facts can be written in any language and reside under the external fa
 
 ### Example
 
-```
+```shell
 sudo vim /etc/terminus/facts.d/date
 ```
 
@@ -19,15 +19,9 @@ echo "{\"Now\": \"$(date)\"}"
 exit 0
 ```
 
-```
-sudo chmod +x /etc/terminus/facts.d/date
-```
-
-```
-terminus -format '{{.date.Now}}'
-```
-
-```
+```shell
+$ sudo chmod +x /etc/terminus/facts.d/date
+$ terminus date
 Sat Apr 11 13:38:26 PDT 2015
 ```
 
@@ -37,11 +31,11 @@ Static facts must be in the JSON format and reside under the external facts dire
 
 ### Example
 
-```
-sudo vim /etc/terminus/facts.d/docker.json
+```shell
+$ sudo vim /etc/terminus/facts.d/docker.json
 ```
 
-```
+```json
 {
   "ClientAPIVersion": "1.16",
   "ClientOSArch": "linux/amd64",
@@ -52,10 +46,7 @@ sudo vim /etc/terminus/facts.d/docker.json
 }
 ```
 
-```
-terminus -format '{{.docker.ServerAPIVersion}}'
-```
-
-```
+```shell
+$ terminus docker.ServerAPIVersion
 1.16
 ```
