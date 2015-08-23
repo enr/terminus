@@ -12,13 +12,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/template"
 )
 
 var (
 	externalFactsDir string
-	format           string
-	formatFile       string
 	httpAddr         string
 	printVersion     bool
 	debug            bool
@@ -27,8 +24,6 @@ var (
 func init() {
 	log.SetFlags(0)
 	flag.StringVar(&externalFactsDir, "external-facts-dir", defaultExternalFacts, "Path to external facts directory.")
-	flag.StringVar(&format, "format", "", "Format the output using the given go template.")
-	flag.StringVar(&formatFile, "format-file", "", "Format the output using the given go template file.")
 	flag.StringVar(&httpAddr, "http", "", "HTTP service address (e.g., ':6060')")
 	flag.BoolVar(&printVersion, "version", false, "print version and exit")
 	flag.BoolVar(&debug, "debug", false, "print errors to stderr instead of ignoring them")
@@ -50,30 +45,6 @@ func main() {
 	}
 
 	f := getFacts()
-
-	if format != "" {
-		tmpl, err := template.New("format").Parse(format)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = tmpl.Execute(os.Stdout, &f.Facts)
-		if err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	}
-
-	if formatFile != "" {
-		tmpl, err := template.ParseFiles(formatFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = tmpl.Execute(os.Stdout, &f.Facts)
-		if err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	}
 
 	// If there are arguments left over, use the first argument as a fact query.
 	if len(flag.Args()) > 0 {

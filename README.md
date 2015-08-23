@@ -4,9 +4,10 @@ Get facts about a Linux system. Parallel execution, structured output, remote AP
 
 ## Install
 
-```
-wget https://github.com/kelseyhightower/terminus/releases/download/v0.0.1/terminus
-chmod +x terminus
+```shell
+$ wget https://github.com/jtopjian/terminus/releases/download/v0.0.3/terminus.gz
+$ gzip -d terminus.gz
+$ chmod +x terminus
 ```
 
 ## Usage
@@ -15,24 +16,15 @@ Terminus ships with a default set of facts that represent info about the system.
 
 ### Print a single fact
 
-```
-$ terminus --format '{{.System.BootID}}'
-029b978a8d0b4ac48c5ca9c92956eeb6
-```
-
-or
-
-```
+```shell
 $ terminus System.Network.Interfaces.eth0.Ip6Addresses.0.Ip
 fe80::f816:3eff:fead:8549
 ```
 
 ### Print all facts
 
-```
-terminus
-```
-```
+```shell
+$ terminus
 {
    "System": {
      "Architecture": "x86_64",
