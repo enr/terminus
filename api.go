@@ -1,12 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 
-	"text/template"
+	"github.com/jtopjian/terminus/config"
 )
 
 type httpError struct {
@@ -25,32 +24,35 @@ func (fn httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func factsHandler(w http.ResponseWriter, r *http.Request) *httpError {
-	f := getFacts()
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return &httpError{err, "Can't process template string", 500}
 	}
 	defer r.Body.Close()
 
+	var path string
 	if string(body) != "" {
-		tmpl, err := template.New("format").Parse(string(body))
-		if err != nil {
-			return &httpError{err, "Can't process template string", 500}
-		}
-		err = tmpl.Execute(w, &f.Facts)
-		if err != nil {
-			return &httpError{err, "Can't process template string", 500}
-		}
-		return nil
+		path = string(body)
 	}
 
-	data, err := json.MarshalIndent(&f.Facts, " ", "  ")
+	c := config.Config{
+		ExternalFactsDir: externalFactsDir,
+		Path:             path,
+		Debug:            false,
+	}
+
+	f := getFacts(c)
+	facts, err := parseFacts(f, c)
 	if err != nil {
 		return &httpError{err, "Error processing facts", 500}
 	}
+	output, err := formatFacts(facts)
+	if err != nil {
+		return &httpError{err, "Error processing facts", 500}
+	}
+
 	w.Header().Set("Server", "Teminus 1.0.0")
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+	w.Write([]byte(output))
 	return nil
 }
