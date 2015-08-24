@@ -1,9 +1,9 @@
+// This file contains the Facts structure and functions to help build facts.
 package facts
 
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/jtopjian/terminus/config"
+	"github.com/jtopjian/terminus/utils"
 )
 
 type Facts struct {
@@ -32,14 +33,14 @@ func (f *Facts) Add(key string, value interface{}) {
 func ProcessExternalFacts(c config.Config, f *Facts) {
 	d, err := os.Open(c.ExternalFactsDir)
 	if err != nil {
-		log.Println(err)
+		utils.Error.Println(err)
 		return
 	}
 	defer d.Close()
 
 	files, err := d.Readdir(0)
 	if err != nil {
-		log.Println(err)
+		utils.Error.Println(err)
 		return
 	}
 
@@ -104,13 +105,13 @@ func factsFromFile(path string, f *Facts, wg *sync.WaitGroup) {
 	defer wg.Done()
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Println(err)
+		utils.Error.Println(err)
 		return
 	}
 	var result interface{}
 	err = json.Unmarshal(data, &result)
 	if err != nil {
-		log.Println(err)
+		utils.Error.Println(err)
 		return
 	}
 	f.Add(strings.TrimSuffix(filepath.Base(path), ".json"), result)
@@ -120,13 +121,13 @@ func factsFromExec(path string, f *Facts, wg *sync.WaitGroup) {
 	defer wg.Done()
 	out, err := exec.Command(path).Output()
 	if err != nil {
-		log.Println(err)
+		utils.Error.Println(err)
 		return
 	}
 	var result interface{}
 	err = json.Unmarshal(out, &result)
 	if err != nil {
-		log.Println(err)
+		utils.Error.Println(err)
 		return
 	}
 	f.Add(filepath.Base(path), result)

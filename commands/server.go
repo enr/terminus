@@ -1,13 +1,34 @@
-package main
+// This file contains the command to enable Terminus to act as an HTTP server.
+package commands
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
-
 	"text/template"
+
+	"github.com/jtopjian/terminus/utils"
+	"github.com/spf13/cobra"
 )
+
+// serverCmd runs terminus in server mode and will report facts back via http requests
+var serverCmd = &cobra.Command{
+	Use:   "server",
+	Short: "Runs terminus as an HTTP server to report facts remotely.",
+	Run:   server,
+}
+
+var (
+	// listen is the address/port that terminus should listen on
+	listen string
+)
+
+// Configure flags and parameters
+func init() {
+	serverCmd.Flags().StringVarP(&listen, "http", "", ":8080", "address/port to listen on.")
+	serverCmd.Flags().StringVarP(&listen, "listen", "", ":8080", "address/port to listen on.")
+}
 
 type httpError struct {
 	Error   error
@@ -17,6 +38,11 @@ type httpError struct {
 
 type httpHandler func(http.ResponseWriter, *http.Request) *httpError
 
+func server(cmd *cobra.Command, args []string) {
+	http.Handle("/facts", httpHandler(factsHandler))
+	utils.ExitWithError(http.ListenAndServe(listen, nil))
+}
+
 func (fn httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := fn(w, r); err != nil {
 		log.Println(err)
@@ -25,7 +51,10 @@ func (fn httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func factsHandler(w http.ResponseWriter, r *http.Request) *httpError {
-	f := getFacts()
+	f, err := getLocalFacts("")
+	if err != nil {
+		utils.ExitWithError(err)
+	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {

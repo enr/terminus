@@ -1,3 +1,4 @@
+// This file contains everything required to generate facts on a Linux-based system.
 package linux
 
 import (
@@ -5,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/jtopjian/terminus/config"
 	"github.com/jtopjian/terminus/facts"
+	"github.com/jtopjian/terminus/utils"
 	"golang.org/x/sys/unix"
 )
 
@@ -248,7 +249,7 @@ func (f *SystemFacts) getSysInfo(wg *sync.WaitGroup) {
 	var info unix.Sysinfo_t
 	if err := unix.Sysinfo(&info); err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -278,7 +279,7 @@ func (f *SystemFacts) getOSRelease(wg *sync.WaitGroup) {
 	osReleaseFile, err := os.Open("/etc/os-release")
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -310,7 +311,7 @@ func (f *SystemFacts) getOSRelease(wg *sync.WaitGroup) {
 	lsbFile, err := os.Open("/etc/lsb-release")
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -337,7 +338,7 @@ func (f *SystemFacts) getMachineID(wg *sync.WaitGroup) {
 	machineIDFile, err := os.Open("/etc/machine-id")
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -345,7 +346,7 @@ func (f *SystemFacts) getMachineID(wg *sync.WaitGroup) {
 	data, err := ioutil.ReadAll(machineIDFile)
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -362,7 +363,7 @@ func (f *SystemFacts) getBootID(wg *sync.WaitGroup) {
 	bootIDFile, err := os.Open("/proc/sys/kernel/random/boot_id")
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -370,7 +371,7 @@ func (f *SystemFacts) getBootID(wg *sync.WaitGroup) {
 	data, err := ioutil.ReadAll(bootIDFile)
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -387,7 +388,7 @@ func (f *SystemFacts) getInterfaces(wg *sync.WaitGroup) {
 	ls, err := net.Interfaces()
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -404,7 +405,7 @@ func (f *SystemFacts) getInterfaces(wg *sync.WaitGroup) {
 		addrs, err := i.Addrs()
 		if err != nil {
 			if c.Debug {
-				log.Println(err.Error())
+				utils.Error.Println(err.Error())
 			}
 			return
 		}
@@ -445,7 +446,7 @@ func (f *SystemFacts) getUname(wg *sync.WaitGroup) {
 	err := unix.Uname(&buf)
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -468,7 +469,7 @@ func (f *SystemFacts) getFileSystems(wg *sync.WaitGroup) {
 	mtab, err := ioutil.ReadFile("/etc/mtab")
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
@@ -493,7 +494,7 @@ func (f *SystemFacts) getFileSystems(wg *sync.WaitGroup) {
 		dumpFreq, err := strconv.ParseUint(fields[4], 10, 64)
 		if err != nil {
 			if c.Debug {
-				log.Println(err.Error())
+				utils.Error.Println(err.Error())
 			}
 			return
 		}
@@ -502,7 +503,7 @@ func (f *SystemFacts) getFileSystems(wg *sync.WaitGroup) {
 		passNo, err := strconv.ParseUint(fields[4], 10, 64)
 		if err != nil {
 			if c.Debug {
-				log.Println(err.Error())
+				utils.Error.Println(err.Error())
 			}
 			return
 		}
@@ -523,84 +524,84 @@ func (f *SystemFacts) getDMI(wg *sync.WaitGroup) {
 	var err error
 	if f.DMI.BIOSDate, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/bios_date"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.BIOSVendor, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/bios_vendor"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.BIOSVersion, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/bios_version"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ChassisAssetTag, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ChassisSerial, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_serial"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ChassisVendor, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_vendor"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ChassisVersion, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/chassis_version"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ProductName, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_name"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ProductSerial, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_serial"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ProductUUID, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_uuid"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.ProductVersion, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/product_version"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
 
 	if f.DMI.SysVendor, err = facts.ReadFileAndReturnValue("/sys/class/dmi/id/sys_vendor"); err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
@@ -614,7 +615,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 	d, err := os.Open("/sys/block")
 	if err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
@@ -623,7 +624,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 	files, err := d.Readdir(0)
 	if err != nil {
 		if c.Debug {
-			log.Println(err)
+			utils.Error.Println(err)
 		}
 		return
 	}
@@ -642,7 +643,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			size, err := facts.ReadFileAndReturnValue(sizePath)
 			if err != nil {
 				if c.Debug {
-					log.Println(err)
+					utils.Error.Println(err)
 				}
 				return
 			}
@@ -652,7 +653,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			vendorPath := fmt.Sprintf("/sys/block/%s/device/vendor", fi.Name())
 			if bd.Vendor, err = facts.ReadFileAndReturnValue(vendorPath); err != nil {
 				if c.Debug {
-					log.Println(err)
+					utils.Error.Println(err)
 				}
 				return
 			}
@@ -661,7 +662,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			sf, err := os.Open(statPath)
 			if err != nil {
 				if c.Debug {
-					log.Println(err)
+					utils.Error.Println(err)
 				}
 			}
 			defer sf.Close()
@@ -697,7 +698,7 @@ func (f *SystemFacts) getProcessors(wg *sync.WaitGroup) {
 	processorFile, err := os.Open("/proc/cpuinfo")
 	if err != nil {
 		if c.Debug {
-			log.Println(err.Error())
+			utils.Error.Println(err.Error())
 		}
 		return
 	}
