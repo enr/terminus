@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.0] - 2015-08-27
+
+### Removed Features
+- Text Template: Removed the ability to format output from the HTTP API with text/template. It now accepts the same dotted-notation as the command-line. Because of the entire text/template removal, the version is being bumped to 0.1.0.
+
 ## [0.0.4] - 2015-08-22
 
 ### New Features
