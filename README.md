@@ -5,7 +5,7 @@ Get facts about a Linux system. Parallel execution, structured output, remote AP
 ## Install
 
 ```shell
-$ wget https://github.com/jtopjian/terminus/releases/download/v0.0.3/terminus.gz
+$ wget https://github.com/jtopjian/terminus/releases/download/v0.0.4/terminus.gz
 $ gzip -d terminus.gz
 $ chmod +x terminus
 ```
