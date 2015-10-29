@@ -18,8 +18,8 @@ func getFacts(c config.Config) *facts.Facts {
 	switch goos := runtime.GOOS; goos {
 	case "linux":
 		f = facts.GetFacts(c)
-	case "windows":
-		log.Println("OS windows not yet fully supported.")
+	case "windows", "darwin":
+		log.Printf("OS %s not yet fully supported.\n", goos)
 		f = facts.GetFacts(c)
 	default:
 		errorAndExit(fmt.Errorf("OS %s is not supported.\n", goos))
