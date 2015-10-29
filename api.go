@@ -46,9 +46,15 @@ func factsHandler(w http.ResponseWriter, r *http.Request) *httpError {
 	if err != nil {
 		return &httpError{err, "Error processing facts", 500}
 	}
-	output, err := formatFacts(facts)
-	if err != nil {
-		return &httpError{err, "Error processing facts", 500}
+
+	var output string
+	if facts == nil {
+		log.Printf(`not found facts for path "%s"`, path)
+	} else {
+		output, err = formatFacts(facts)
+		if err != nil {
+			return &httpError{err, "Error processing facts", 500}
+		}
 	}
 
 	w.Header().Set("Server", "Teminus 1.0.0")
