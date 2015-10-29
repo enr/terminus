@@ -18,7 +18,6 @@ import (
 func (f *SystemFacts) getSysInfo(wg *sync.WaitGroup) {
 	defer wg.Done()
 	log.Println("getSysInfo NOT fully implemented")
-	defer wg.Done()
 
 	f.mu.Lock()
 	defer f.mu.Unlock()
