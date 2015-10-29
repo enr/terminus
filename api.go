@@ -57,7 +57,7 @@ func factsHandler(w http.ResponseWriter, r *http.Request) *httpError {
 		}
 	}
 
-	w.Header().Set("Server", "Teminus 1.0.0")
+	w.Header().Set("Server", "Terminus 1.0.0")
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(output))
 	return nil
