@@ -10,12 +10,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"text/template"
 
 	"github.com/enr/terminus/config"
 )
 
 var (
 	externalFactsDir string
+	format           string
+	formatFile       string
 	httpAddr         string
 	printVersion     bool
 	debug            bool
@@ -25,6 +28,8 @@ func init() {
 	log.SetFlags(0)
 	flag.BoolVar(&debug, "debug", false, "print errors to stderr instead of ignoring them")
 	flag.StringVar(&externalFactsDir, "external-facts-dir", defaultExternalFacts(), "Path to external facts directory.")
+	flag.StringVar(&format, "format", "", "Format the output using the given go template.")
+	flag.StringVar(&formatFile, "format-file", "", "Format the output using the given go template file.")
 	flag.StringVar(&httpAddr, "http", "", "HTTP service address (e.g., ':6060')")
 	flag.BoolVar(&printVersion, "version", false, "print version and exit")
 }
@@ -56,6 +61,31 @@ func main() {
 	}
 
 	f := getFacts(c)
+
+	if format != "" {
+		tmpl, err := template.New("format").Parse(format)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = tmpl.Execute(os.Stdout, &f.Facts)
+		if err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}
+
+	if formatFile != "" {
+		tmpl, err := template.ParseFiles(formatFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = tmpl.Execute(os.Stdout, &f.Facts)
+		if err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}
+
 	facts, err := parseFacts(f, c)
 	if err != nil {
 		errorAndExit(err)
