@@ -104,6 +104,9 @@ func (f *SystemFacts) getUname(wg *sync.WaitGroup) {
 }
 
 func isExecutable(fi os.FileInfo) bool {
+	if strings.HasSuffix(fi.Name(), ".json") {
+		return false
+	}
 	m := fi.Mode()
 	return !m.IsDir()
 }
