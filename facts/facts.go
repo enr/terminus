@@ -2,6 +2,7 @@ package facts
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -69,6 +70,7 @@ func ProcessExternalFacts(c config.Config, f *Facts) {
 	for _, p := range executableFacts {
 		p := p
 		wg.Add(1)
+		fmt.Println("EXE ", p)
 		go factsFromExec(p, f, &wg)
 	}
 	wg.Wait()
@@ -130,11 +132,4 @@ func factsFromExec(path string, f *Facts, wg *sync.WaitGroup) {
 		return
 	}
 	f.Add(filepath.Base(path), result)
-}
-
-func isExecutable(fi os.FileInfo) bool {
-	if m := fi.Mode(); !m.IsDir() && m&0111 != 0 {
-		return true
-	}
-	return false
 }

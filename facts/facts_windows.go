@@ -103,6 +103,11 @@ func (f *SystemFacts) getUname(wg *sync.WaitGroup) {
 	return
 }
 
+func isExecutable(fi os.FileInfo) bool {
+	m := fi.Mode()
+	return !m.IsDir()
+}
+
 /*
 c:\windows>wmic OS get FreePhysicalMemory /Value
 FreePhysicalMemory=12324404
