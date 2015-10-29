@@ -9,16 +9,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jtopjian/terminus/config"
-	"github.com/jtopjian/terminus/facts"
-	"github.com/jtopjian/terminus/facts/linux"
+	"github.com/enr/terminus/config"
+	"github.com/enr/terminus/facts"
 )
 
 func getFacts(c config.Config) *facts.Facts {
 	f := facts.New()
 	switch goos := runtime.GOOS; goos {
 	case "linux":
-		f = linux.GetFacts(c)
+		f = facts.GetFacts(c)
+	case "windows":
+		log.Println("OS windows not yet fully supported.")
+		f = facts.GetFacts(c)
 	default:
 		errorAndExit(fmt.Errorf("OS %s is not supported.\n", goos))
 	}

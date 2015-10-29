@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/jtopjian/terminus/config"
+	"github.com/enr/terminus/config"
 )
 
 var (
@@ -21,12 +21,10 @@ var (
 	debug            bool
 )
 
-var defaultExternalFacts = "/etc/terminus/facts.d"
-
 func init() {
 	log.SetFlags(0)
 	flag.BoolVar(&debug, "debug", false, "print errors to stderr instead of ignoring them")
-	flag.StringVar(&externalFactsDir, "external-facts-dir", defaultExternalFacts, "Path to external facts directory.")
+	flag.StringVar(&externalFactsDir, "external-facts-dir", defaultExternalFacts(), "Path to external facts directory.")
 	flag.StringVar(&httpAddr, "http", "", "HTTP service address (e.g., ':6060')")
 	flag.BoolVar(&printVersion, "version", false, "print version and exit")
 }

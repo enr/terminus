@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/jtopjian/terminus/config"
+	"github.com/enr/terminus/config"
 )
 
 type httpError struct {

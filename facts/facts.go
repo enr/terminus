@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jtopjian/terminus/config"
+	"github.com/enr/terminus/config"
 )
 
 type Facts struct {
