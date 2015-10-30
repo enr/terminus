@@ -3,9 +3,12 @@
 package facts
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"sync"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
