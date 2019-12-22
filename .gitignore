@@ -1,3 +1,4 @@
-terminus
-terminus.exe
+bin/
+pkg/
+dist/
 **/*.swp

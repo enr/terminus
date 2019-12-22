@@ -1,6 +1,6 @@
 # Terminus
 
-Get facts about a Linux system. Parallel execution, structured output, remote API.
+Get facts about a system. Parallel execution, structured output, remote API.
 
 ## Install
 
@@ -19,6 +19,13 @@ Terminus ships with a default set of facts that represent info about the system.
 ```shell
 $ terminus System.Network.Interfaces.eth0.Ip6Addresses.0.Ip
 fe80::f816:3eff:fead:8549
+```
+
+Using templates:
+
+```shell
+$ terminus --format 'Machine ID is {{ .System.MachineID }}'
+Machine ID is bab60d34057d4ed7a7f3699ee4d15d26
 ```
 
 ### Print all facts

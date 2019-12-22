@@ -1,0 +1,11 @@
+# github.com/enr/runcmd v0.0.0-20150827194601-c7ba37e9c07d
+github.com/enr/runcmd
+# github.com/extemporalgenome/slug v0.0.0-20150414033109-0320c85e32e0
+github.com/extemporalgenome/slug
+# github.com/subosito/gotenv v1.2.0
+github.com/subosito/gotenv
+# golang.org/x/sys v0.0.0-20191220220014-0732a990476f
+golang.org/x/sys/unix
+# golang.org/x/text v0.3.2
+golang.org/x/text/transform
+golang.org/x/text/unicode/norm
