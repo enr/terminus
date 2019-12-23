@@ -33,7 +33,7 @@ for dir in $(find "$LIB_DIR" -mindepth 1 -maxdepth 1 -type d); do
   echo "===  Process lib ${app_name} [${dir}]"
   cd "$dir"
   echo "--- golint"
-  #diff <(golint ./...) <(printf "")
+  diff <(golint ./...) <(printf "")
   echo "--- go fmt"
   go fmt ./...
   echo "--- go vet"
@@ -55,7 +55,7 @@ for dir in $(find "$CMDS_DIR" -mindepth 1 -maxdepth 1 -type d); do
   echo "===  Process cmd ${app_name} [${dir}]"
   cd "$dir"
   echo "--- golint"
-  #diff <(golint ./...) <(printf "")
+  diff <(golint ./...) <(printf "")
   echo "--- go fmt"
   go fmt ./...
   echo "--- go vet"

@@ -16,13 +16,6 @@ import (
 	"github.com/enr/terminus/lib/config"
 )
 
-// Constants
-const (
-	// LINUX_SYSINFO_LOADS_SCALE has been described elsewhere as a "magic" number.
-	// It reverts the calculation of "load << (SI_LOAD_SHIFT - FSHIFT)" done in the original load calculation.
-	LINUX_SYSINFO_LOADS_SCALE float64 = 65536.0
-)
-
 // Vars
 var (
 	c config.Config
@@ -128,17 +121,19 @@ type Interface struct {
 	Index        int
 	HardwareAddr string
 	IPAddresses  []string
-	IP4Addresses []Ip4Address
-	IP6Addresses []Ip6Address
+	IP4Addresses []IP4Address
+	IP6Addresses []IP6Address
 }
 
-type Ip4Address struct {
+// IP4Address IP 4 address
+type IP4Address struct {
 	CIDR    string
 	IP      string
 	Netmask string
 }
 
-type Ip6Address struct {
+// IP6Address IP 6 address
+type IP6Address struct {
 	CIDR   string
 	IP     string
 	Prefix int
@@ -307,8 +302,8 @@ func (f *SystemFacts) getInterfaces(wg *sync.WaitGroup) {
 	m := make(Interfaces)
 	for _, i := range ls {
 		ipaddreses := make([]string, 0)
-		ip4addrs := make([]Ip4Address, 0)
-		ip6addrs := make([]Ip6Address, 0)
+		ip4addrs := make([]IP4Address, 0)
+		ip6addrs := make([]IP6Address, 0)
 
 		addrs, err := i.Addrs()
 		if err != nil {
@@ -322,12 +317,12 @@ func (f *SystemFacts) getInterfaces(wg *sync.WaitGroup) {
 			ipaddreses = append(ipaddreses, cidr)
 			ip, ipnet, _ := net.ParseCIDR(cidr)
 			if ip.To4() != nil {
-				ip4addrs = append(ip4addrs, Ip4Address{cidr, ip.String(), toNetmask(ipnet.Mask)})
+				ip4addrs = append(ip4addrs, IP4Address{cidr, ip.String(), toNetmask(ipnet.Mask)})
 				continue
 			}
 			if ip.To16() != nil {
 				ones, _ := ipnet.Mask.Size()
-				ip6addrs = append(ip6addrs, Ip6Address{cidr, ip.String(), ones})
+				ip6addrs = append(ip6addrs, IP6Address{cidr, ip.String(), ones})
 			}
 		}
 		m[i.Name] = Interface{
@@ -406,84 +401,84 @@ func (f *SystemFacts) getDMI(wg *sync.WaitGroup) {
 	defer f.mu.Unlock()
 
 	var err error
-	if f.DMI.BIOSDate, err = ReadFileAndReturnValue("/sys/class/dmi/id/bios_date"); err != nil {
+	if f.DMI.BIOSDate, err = readFileAndReturnValue("/sys/class/dmi/id/bios_date"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.BIOSVendor, err = ReadFileAndReturnValue("/sys/class/dmi/id/bios_vendor"); err != nil {
+	if f.DMI.BIOSVendor, err = readFileAndReturnValue("/sys/class/dmi/id/bios_vendor"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.BIOSVersion, err = ReadFileAndReturnValue("/sys/class/dmi/id/bios_version"); err != nil {
+	if f.DMI.BIOSVersion, err = readFileAndReturnValue("/sys/class/dmi/id/bios_version"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisAssetTag, err = ReadFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag"); err != nil {
+	if f.DMI.ChassisAssetTag, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_asset_tag"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisSerial, err = ReadFileAndReturnValue("/sys/class/dmi/id/chassis_serial"); err != nil {
+	if f.DMI.ChassisSerial, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_serial"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisVendor, err = ReadFileAndReturnValue("/sys/class/dmi/id/chassis_vendor"); err != nil {
+	if f.DMI.ChassisVendor, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_vendor"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ChassisVersion, err = ReadFileAndReturnValue("/sys/class/dmi/id/chassis_version"); err != nil {
+	if f.DMI.ChassisVersion, err = readFileAndReturnValue("/sys/class/dmi/id/chassis_version"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductName, err = ReadFileAndReturnValue("/sys/class/dmi/id/product_name"); err != nil {
+	if f.DMI.ProductName, err = readFileAndReturnValue("/sys/class/dmi/id/product_name"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductSerial, err = ReadFileAndReturnValue("/sys/class/dmi/id/product_serial"); err != nil {
+	if f.DMI.ProductSerial, err = readFileAndReturnValue("/sys/class/dmi/id/product_serial"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductUUID, err = ReadFileAndReturnValue("/sys/class/dmi/id/product_uuid"); err != nil {
+	if f.DMI.ProductUUID, err = readFileAndReturnValue("/sys/class/dmi/id/product_uuid"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.ProductVersion, err = ReadFileAndReturnValue("/sys/class/dmi/id/product_version"); err != nil {
+	if f.DMI.ProductVersion, err = readFileAndReturnValue("/sys/class/dmi/id/product_version"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
 		return
 	}
 
-	if f.DMI.SysVendor, err = ReadFileAndReturnValue("/sys/class/dmi/id/sys_vendor"); err != nil {
+	if f.DMI.SysVendor, err = readFileAndReturnValue("/sys/class/dmi/id/sys_vendor"); err != nil {
 		if c.Debug {
 			log.Println(err)
 		}
@@ -524,7 +519,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			bd.Device = fi.Name()
 
 			sizePath := fmt.Sprintf("/sys/block/%s/size", fi.Name())
-			size, err := ReadFileAndReturnValue(sizePath)
+			size, err := readFileAndReturnValue(sizePath)
 			if err != nil {
 				if c.Debug {
 					log.Println(err)
@@ -535,7 +530,7 @@ func (f *SystemFacts) getBlockDevices(wg *sync.WaitGroup) {
 			bd.Size, _ = strconv.ParseUint(size, 10, 64)
 
 			vendorPath := fmt.Sprintf("/sys/block/%s/device/vendor", fi.Name())
-			if bd.Vendor, err = ReadFileAndReturnValue(vendorPath); err != nil {
+			if bd.Vendor, err = readFileAndReturnValue(vendorPath); err != nil {
 				if c.Debug {
 					log.Println(err)
 				}
@@ -591,7 +586,7 @@ func (f *SystemFacts) getProcessors(wg *sync.WaitGroup) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	var cpuCount int = 0
+	var cpuCount int
 	procs := []Processor{}
 	p := Processor{}
 
@@ -604,7 +599,7 @@ func (f *SystemFacts) getProcessors(wg *sync.WaitGroup) {
 
 			switch key {
 			case "processor":
-				cpuCount += 1
+				cpuCount++
 			case "vendor_id":
 				p.VendorID = value
 			case "cpu family":

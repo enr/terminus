@@ -22,7 +22,7 @@ func getFacts(c config.Config) *facts.Facts {
 		log.Printf("OS %s not yet fully supported.\n", goos)
 		f = facts.GetFacts(c)
 	default:
-		errorAndExit(fmt.Errorf("OS %s is not supported.\n", goos))
+		errorAndExit(fmt.Errorf("os %s is not supported", goos))
 	}
 	return f
 }
@@ -30,7 +30,7 @@ func getFacts(c config.Config) *facts.Facts {
 func parseFacts(f *facts.Facts, c config.Config) (interface{}, error) {
 	var data interface{}
 	var value interface{}
-	path_pieces := strings.Split(c.Path, ".")
+	pathPieces := strings.Split(c.Path, ".")
 
 	// Convert the Fact structure into a generic interface{}
 	// by first converting it to JSON and then decoding it.
@@ -47,8 +47,8 @@ func parseFacts(f *facts.Facts, c config.Config) (interface{}, error) {
 
 	// Walk through the given path.
 	// If there's a result, print it.
-	if len(path_pieces) > 1 {
-		for _, p := range path_pieces {
+	if len(pathPieces) > 1 {
+		for _, p := range pathPieces {
 			i, err := strconv.Atoi(p)
 			if err != nil {
 				if _, ok := data.(map[string]interface{}); ok {
@@ -70,22 +70,20 @@ func parseFacts(f *facts.Facts, c config.Config) (interface{}, error) {
 
 func formatFacts(facts interface{}) (string, error) {
 	if _, ok := facts.([]interface{}); ok {
-		if j, err := json.MarshalIndent(facts, " ", " "); err != nil {
+		j, err := json.MarshalIndent(facts, " ", " ")
+		if err != nil {
 			return "", err
-		} else {
-			return string(j), nil
 		}
-	} else {
-		if _, ok := facts.(map[string]interface{}); ok {
-			if j, err := json.MarshalIndent(facts, " ", " "); err != nil {
-				return "", err
-			} else {
-				return string(j), nil
-			}
-		} else {
-			return fmt.Sprintf("%s", facts), nil
-		}
+		return string(j), nil
 	}
+	if _, ok := facts.(map[string]interface{}); ok {
+		j, err := json.MarshalIndent(facts, " ", " ")
+		if err != nil {
+			return "", err
+		}
+		return string(j), nil
+	}
+	return fmt.Sprintf("%s", facts), nil
 }
 
 func errorAndExit(err error) {

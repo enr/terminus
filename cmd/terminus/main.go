@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/enr/terminus/lib/config"
+	"github.com/enr/terminus/lib/core"
 )
 
 var (
@@ -22,6 +23,12 @@ var (
 	httpAddr         string
 	printVersion     bool
 	debug            bool
+
+	versionTemplate = `%s
+Revision: %s
+Build date: %s
+`
+	appVersion = fmt.Sprintf(versionTemplate, core.Version, core.GitCommit, core.BuildTime)
 )
 
 func init() {
@@ -51,7 +58,7 @@ func main() {
 	}
 
 	if printVersion {
-		fmt.Printf("terminus %s\n", Version)
+		fmt.Printf("terminus %s\n", appVersion)
 		os.Exit(0)
 	}
 

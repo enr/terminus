@@ -88,7 +88,7 @@ func charsToString(ca [65]byte) string {
 	return string(s[0:lens])
 }
 
-func ReadFileAndReturnValue(fileName string) (string, error) {
+func readFileAndReturnValue(fileName string) (string, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return "", err

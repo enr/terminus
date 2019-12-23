@@ -13,6 +13,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Constants
+const (
+	// linuxSysinfoLoadsScale has been described elsewhere as a "magic" number.
+	// It reverts the calculation of "load << (SI_LOAD_SHIFT - FSHIFT)" done in the original load calculation.
+	linuxSysinfoLoadsScale float64 = 65536.0
+)
+
 func (f *SystemFacts) getSysInfo(wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -37,9 +44,9 @@ func (f *SystemFacts) getSysInfo(wg *sync.WaitGroup) {
 
 	f.Uptime = info.Uptime
 
-	f.LoadAverage.One = fmt.Sprintf("%.2f", float64(info.Loads[0])/LINUX_SYSINFO_LOADS_SCALE)
-	f.LoadAverage.Five = fmt.Sprintf("%.2f", float64(info.Loads[1])/LINUX_SYSINFO_LOADS_SCALE)
-	f.LoadAverage.Ten = fmt.Sprintf("%.2f", float64(info.Loads[2])/LINUX_SYSINFO_LOADS_SCALE)
+	f.LoadAverage.One = fmt.Sprintf("%.2f", float64(info.Loads[0])/linuxSysinfoLoadsScale)
+	f.LoadAverage.Five = fmt.Sprintf("%.2f", float64(info.Loads[1])/linuxSysinfoLoadsScale)
+	f.LoadAverage.Ten = fmt.Sprintf("%.2f", float64(info.Loads[2])/linuxSysinfoLoadsScale)
 
 	return
 }

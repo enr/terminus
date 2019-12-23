@@ -119,3 +119,12 @@ $ terminus
    }
  }
 ```
+
+## Development
+
+Use scripts in `.sdlc/` directory.
+
+- Build: `.sdlc/build`
+- Build distribution files: `.sdlc/build-dist`
+- Run code analysis and tests: `.sdlc/check`
+- Update dependencies: `.sdlc/update`
