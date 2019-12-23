@@ -4,4 +4,4 @@ REPO_NAME='terminus'
 DIST_DIR='dist'
 GOPROXY='off'
 
-APP_VERSION='0.1.2-dev' # APP_VERSION_AUTOLINE this line is automatically managed
+APP_VERSION='0.1.2' # APP_VERSION_AUTOLINE this line is automatically managed
