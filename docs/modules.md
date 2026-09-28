@@ -391,6 +391,11 @@ Ports held by `conmon` or `docker-proxy` belong to rootful containers: their tra
 DNAT-ed in prerouting and goes through the forward chain, not the input chain, so they are
 reported as reachable whatever the input chain says (the classic "docker bypasses ufw").
 
+A socket listening on `::` (the IPv6 wildcard) also accepts IPv4 clients through IPv4-mapped
+addresses unless `net.ipv6.bindv6only=1`, whatever the socket's own `IPV6_V6ONLY` option (not
+observable from outside the process): such a listener is evaluated against both the IPv4 and the
+IPv6 rules, and reported reachable if either one lets a new connection in.
+
 ```toml
 [modules.firewall]
 enabled = true

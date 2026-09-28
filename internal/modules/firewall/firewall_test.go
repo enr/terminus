@@ -86,6 +86,17 @@ COMMIT
 COMMIT
 `
 
+// ip6BlockAll drops everything but established connections and loopback: no accept rule for any
+// port, unlike ufwLegacy which opens 22, 80, 443 and 5432 (from a subnet) over IPv4.
+const ip6BlockAll = `*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+COMMIT
+`
+
 func listeners(ls ...network.Listener) func(hostfs.FS) ([]network.Listener, error) {
 	return func(hostfs.FS) ([]network.Listener, error) { return ls, nil }
 }
@@ -241,6 +252,45 @@ func TestIptablesLegacy(t *testing.T) {
 	}
 }
 
+func TestDualStackSocketMergesIPv4AndIPv6(t *testing.T) {
+	// Port 22 is open over IPv4 (ufwLegacy) but dropped by every IPv6 rule (ip6BlockAll). A
+	// socket bound to :: still accepts it over IPv4 (through IPv4-mapped addresses) unless
+	// net.ipv6.bindv6only says otherwise: reporting it as filtered would be wrong.
+	r := &runner.Fake{
+		Paths: map[string]string{"iptables-legacy-save": "/usr/sbin/iptables-legacy-save", "ip6tables-legacy-save": "/usr/sbin/ip6tables-legacy-save"},
+		Results: map[string]runner.Result{
+			"iptables-legacy-save -t filter":  {Stdout: []byte(ufwLegacy)},
+			"ip6tables-legacy-save -t filter": {Stdout: []byte(ip6BlockAll)},
+		},
+	}
+	only := listeners(tcp(22, "inet6", "any", "sshd"))
+
+	m := New()
+	m.fs = hostfstest.New(t, map[string]string{}) // no bindv6only: the kernel default (dual-stack)
+	m.euid = func() int { return 0 }
+	m.listeners = only
+	got, err := m.Collect(context.Background(), &module.Env{Runner: r})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reach := reachOf(got.(*Facts))["tcp/inet6/22"]; reach != Open {
+		t.Errorf("dual-stack default: reach = %q, want %q", reach, Open)
+	}
+
+	// net.ipv6.bindv6only=1: the socket only ever accepts IPv6, so the IPv4 rules do not apply.
+	m2 := New()
+	m2.fs = hostfstest.New(t, map[string]string{"/proc/sys/net/ipv6/bindv6only": "1\n"})
+	m2.euid = func() int { return 0 }
+	m2.listeners = only
+	got2, err := m2.Collect(context.Background(), &module.Env{Runner: r})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reach := reachOf(got2.(*Facts))["tcp/inet6/22"]; reach != Filtered {
+		t.Errorf("bindv6only=1: reach = %q, want %q", reach, Filtered)
+	}
+}
+
 func TestNoFirewall(t *testing.T) {
 	r := &runner.Fake{
 		Paths: map[string]string{"nft": "/usr/sbin/nft", "firewall-cmd": "/usr/bin/firewall-cmd", "iptables-legacy-save": "/usr/sbin/iptables-legacy-save"},
@@ -307,5 +357,9 @@ func TestParseHelpers(t *testing.T) {
 	}
 	if _, err := parsePorts("ssh"); err == nil {
 		t.Error("invalid port")
+	}
+	if moreOpen(Filtered, Open) != Open || moreOpen(Open, Filtered) != Open ||
+		moreOpen(Restricted, Filtered) != Restricted || moreOpen(Filtered, Filtered) != Filtered {
+		t.Error("moreOpen")
 	}
 }
