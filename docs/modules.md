@@ -330,3 +330,23 @@ Borg never prompts: a repository moved or unencrypted and never seen before is a
 | `backup.age` | hours since the latest backup: warn ≥ 26, fail ≥ 50 (or `max_age` and twice it); warn at least when pgBackRest marks it as ended with an error |
 | `backup.repository` | fail: the repository cannot be read (the last line of the tool error is reported), or it holds no backup |
 | `backup.job` | fail: the last run of `unit` failed |
+
+## updates
+
+Pending package updates with the package manager of the machine, computed from the package
+index it already has (nothing is downloaded, no lock is taken):
+`apt-get -s dist-upgrade` (security updates come from a `-security` suite), `dnf`/`yum`
+`--cacheonly check-update` and `updateinfo list --security`, `apk version -l '<'` (no security
+information). Then the age of the package index (the counts are only as recent as the last
+`apt update`/`dnf makecache`), and whether a reboot is pending: `/run/reboot-required` (with the
+packages that asked for it), `needs-restarting -r` when installed, a kernel newer than the
+running one in `/lib/modules`, or the modules of the running kernel removed.
+
+No settings: `enabled = true` in `[modules.updates]`.
+
+| Check | Rule |
+|---|---|
+| `updates.security` | pending security updates: warn ≥ 1, fail ≥ 20 |
+| `updates.pending` | info: pending updates, with their names |
+| `updates.reboot` | warn: a reboot is pending, with the reasons |
+| `updates.index-age` | days since the package index was refreshed: warn ≥ 7, fail ≥ 30 |

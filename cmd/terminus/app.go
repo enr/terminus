@@ -27,6 +27,7 @@ import (
 	"github.com/enr/terminus/internal/modules/system"
 	"github.com/enr/terminus/internal/modules/systemd"
 	"github.com/enr/terminus/internal/modules/tlscerts"
+	"github.com/enr/terminus/internal/modules/updates"
 	"github.com/enr/terminus/internal/runner"
 )
 
@@ -57,6 +58,7 @@ func builtinModules(externalFactsDir string) []module.Module {
 		postgres.New(),
 		tlscerts.New(),
 		backup.New(),
+		updates.New(),
 	}
 }
 

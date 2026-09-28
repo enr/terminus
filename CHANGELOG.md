@@ -56,6 +56,9 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   served by endpoints: expiry, chain verification, host names.
 - Optional `backup` module: latest backup of restic, borg and pgBackRest repositories, its age,
   and the result of the systemd unit that makes it.
+- Optional `updates` module: pending updates and security updates (apt, dnf, yum, apk) from the
+  package index already on the machine, its age, pending reboot (marker, needs-restarting, newer
+  kernel installed).
 
 ### Changed
 - `terminus` without arguments prints the facts as text; use `terminus facts -o json` for JSON.
