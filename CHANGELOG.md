@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 Start of terminus v2: facts plus checks on them, organized in modules (see `docs/design-v2.md`).
 
 ### New Features
+- Shell completion of the module names for `--only`, `--modules` and `--no-modules`, external
+  modules included (`terminus completion bash`).
 - `terminus check`: evaluates the facts and reports findings (ok/info/warn/fail);
   exit code 0 ok, 1 warn, 2 fail, 3 terminus error.
 - Core modules `system`, `cpu`, `memory`, `storage`, `network`, `external` (docs/modules.md) with

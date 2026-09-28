@@ -121,6 +121,10 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 	pf.BoolVar(&g.noPager, "no-pager", false, "do not page long output on a terminal (pager: $TERMINUS_PAGER, $PAGER or less)")
 	pf.StringSliceVar(&g.users, "users", nil, "users inspected by systemd, podman, quadlet and timers (default from the configuration: auto)")
 
+	for _, name := range []string{"only", "modules", "no-modules"} {
+		_ = root.RegisterFlagCompletionFunc(name, completeModules(g))
+	}
+
 	// Defined here to keep -v free: subcommands use it for --verbose.
 	root.Flags().Bool("version", false, "print the version")
 	addFactsFlags(root, fo)
@@ -480,4 +484,37 @@ func writeOutput(path string, stdout io.Writer, write func(io.Writer) error) err
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
+}
+
+// completeModules completes the comma-separated module names of --only, --modules and --no-modules,
+// external modules included. The selection flags are ignored: the names are those of the registry.
+func completeModules(g *globalOptions) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		probe := *g
+		probe.only, probe.enable, probe.disable = nil, nil, nil
+		probe.changed = func(name string) bool {
+			f := cmd.Flags().Lookup(name)
+			return f != nil && f.Changed
+		}
+		a, err := newApp(&probe, io.Discard)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		// Names already in the list are not proposed again.
+		prefix := ""
+		done := map[string]bool{}
+		if i := strings.LastIndex(toComplete, ","); i >= 0 {
+			prefix = toComplete[:i+1]
+			for _, n := range strings.Split(prefix, ",") {
+				done[n] = true
+			}
+		}
+		var out []string
+		for _, m := range a.reg.All() {
+			if n := m.Name(); !done[n] {
+				out = append(out, prefix+n+"\t"+m.Description())
+			}
+		}
+		return out, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveNoSpace
+	}
 }
