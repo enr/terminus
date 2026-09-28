@@ -2,6 +2,33 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.2.0] - unreleased
+
+Start of terminus v2: facts plus checks on them, organized in modules (see `docs/design-v2.md`).
+
+### New Features
+- `terminus check`: evaluates the facts and reports findings (ok/info/warn/fail);
+  exit code 0 ok, 1 warn, 2 fail, 3 terminus error. First check: `mem.available-low`.
+- Output formats: `text` for humans (colors only on a terminal, `--color`, `NO_COLOR`) and
+  `json` with a versioned schema (`schema_version`), per-module status, errors and timings.
+- Modules run in parallel with a per-module timeout (`--timeout`); a failing or hanging module
+  is reported instead of stopping the run. `--only` selects the modules.
+- `terminus serve`: `POST /facts` as before, plus `GET /report`.
+- New fact: `System.Memory.Available` (MemAvailable).
+
+### Changed
+- `terminus` without arguments prints the facts as text; use `terminus facts -o json` for JSON.
+  In JSON the facts are under `.modules.<module>.facts`.
+- Path queries match keys case-insensitively and fail with exit code 3 when the fact is missing.
+- Static binaries (`CGO_ENABLED=0`) for linux/amd64 and linux/arm64; Go 1.24, no vendor directory.
+- v1 flags (`-format`, `-http`, `-version`, ...) keep working.
+
+### Fixed
+- Memory and swap sizes honour the sysinfo memory unit.
+
+### Removed Features
+- Windows and macOS support.
+
 ## [0.1.0] - 2015-08-27
 
 ### Removed Features

@@ -11,10 +11,9 @@ import (
 )
 
 type fakeModule struct {
-	name     string
-	core     bool
-	collect  func(ctx context.Context) (any, error)
-	findings []model.Finding
+	name    string
+	core    bool
+	collect func(ctx context.Context) (any, error)
 }
 
 func (m *fakeModule) Name() string { return m.name }
