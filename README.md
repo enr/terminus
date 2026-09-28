@@ -34,7 +34,7 @@ terminus version
 
 Facts and checks are grouped in modules: the core ones (`system`, `cpu`, `memory`, `storage`,
 `network`, `systemd`, `external` for custom facts) run by default, optional ones (`http`,
-`journal`, `podman`, `quadlet`, `caddy`, `postgres`, `tls`, `backup`, `updates`) are enabled in
+`journal`, `podman`, `quadlet`, `caddy`, `postgres`, `tls`, `backup`, `updates`, `timers`) are enabled in
 [`/etc/terminus/terminus.toml`](docs/configuration.md), and [external modules](docs/configuration.md#external-modules)
 are executables dropped in `/etc/terminus/modules.d`. `--only memory,storage` runs just some.
 Terminus also supports [custom facts](docs/custom-facts.md) and a [HTTP API](docs/api.md).

@@ -350,3 +350,25 @@ No settings: `enabled = true` in `[modules.updates]`.
 | `updates.pending` | info: pending updates, with their names |
 | `updates.reboot` | warn: a reboot is pending, with the reasons |
 | `updates.index-age` | days since the package index was refreshed: warn ≥ 7, fail ≥ 30 |
+
+## timers
+
+The systemd timers of the system manager and of the user managers (users as in
+`[modules.systemd]`, `--users` overrides them): state, whether they are enabled, schedule
+(`OnCalendar=`, `OnBootSec=`, ...), `Persistent=`, last and next run, and the state of the unit each
+one starts: result and exit status of its last run.
+
+```toml
+[modules.timers]
+enabled = true
+users = "auto"
+timers = ["*.timer"]    # glob patterns
+```
+
+| Check | Rule |
+|---|---|
+| `timers.failed` | fail: the last run of the unit a timer starts failed, or the unit does not exist; ok per manager otherwise |
+| `timers.not-active` | warn: timer enabled but not started (installed without `--now`, or stopped): it does not fire until the next boot |
+| `timers.never-run` | info: never fired although active for more than a day and for longer than the wait to its next run |
+| `timers.no-next` | info: active calendar timer that will not fire again (a date in the past) |
+| `timers.scope` | a user manager not inspected, or not readable |

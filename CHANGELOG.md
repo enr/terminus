@@ -35,7 +35,7 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   the .container names the volume without the suffix), quadlet.network-not-used, quadlet.dryrun,
   quadlet.unit-not-loaded, quadlet.unit-never-active, quadlet.changed-since-start,
   quadlet.volume-owner.
-- `--users` applies to systemd, podman and quadlet.
+- `--users` applies to systemd, podman, quadlet and timers.
 - Optional `caddy` module: domains served, upstreams, served certificates, DNS of the domains.
 - Optional `postgres` module: connections by client, settings, sizes, stuck transactions.
 - `public_ports` in `[modules.network]`: unexpected public ports become warnings.
@@ -59,6 +59,8 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
 - Optional `updates` module: pending updates and security updates (apt, dnf, yum, apk) from the
   package index already on the machine, its age, pending reboot (marker, needs-restarting, newer
   kernel installed).
+- Optional `timers` module: systemd timers of the system and user managers, schedule, last and
+  next run, result of the last run.
 
 ### Changed
 - `terminus` without arguments prints the facts as text; use `terminus facts -o json` for JSON.
