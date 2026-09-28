@@ -1,6 +1,7 @@
 package output
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -76,7 +77,7 @@ func (Text) Render(w io.Writer, r *model.Report, o Options) error {
 	}
 	renderModules(b, s, r)
 	if o.Facts {
-		renderFacts(b, s, r)
+		renderFacts(b, s, r, o.Verbose)
 	}
 	_, err := io.WriteString(w, b.String())
 	return err
@@ -152,7 +153,7 @@ func renderModules(b *strings.Builder, s styles, r *model.Report) {
 	}
 }
 
-func renderFacts(b *strings.Builder, s styles, r *model.Report) {
+func renderFacts(b *strings.Builder, s styles, r *model.Report, verbose bool) {
 	tree, err := query.Generic(r.FactsTree())
 	if err != nil {
 		fmt.Fprintf(b, "\nfacts not available: %v\n", err)
@@ -163,22 +164,44 @@ func renderFacts(b *strings.Builder, s styles, r *model.Report) {
 		return
 	}
 	fmt.Fprintf(b, "\n%s\n", s.title.Render("Facts"))
-	writeTree(b, s, root, 1)
+	w := treeWriter{b: b, s: s, verbose: verbose}
+	w.write(root, 1)
 }
 
-// writeTree prints a generic tree as indented "key: value" lines; lists of scalars stay on one line.
-func writeTree(b *strings.Builder, s styles, v any, depth int) {
+// Beyond these sizes lists of values and maps of values are summarized unless verbose.
+const (
+	maxInlineList = 12
+	maxScalarMap  = 25
+)
+
+type treeWriter struct {
+	b       *strings.Builder
+	s       styles
+	verbose bool
+}
+
+// write prints a generic tree as indented "key: value" lines; lists of scalars stay on one line.
+func (w treeWriter) write(v any, depth int) {
+	b, s := w.b, w.s
 	indent := strings.Repeat("  ", depth)
 	switch node := v.(type) {
 	case map[string]any:
 		for _, k := range sortedKeys(node) {
 			child := node[k]
+			if isScalar(child) && !isEmptyMap(child) {
+				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), humanScalar(k, child))
+				continue
+			}
+			if summary, ok := w.summarize(child); ok {
+				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), s.dim.Render(summary))
+				continue
+			}
 			if isScalar(child) || isScalarList(child) {
 				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), scalarString(child))
 				continue
 			}
 			fmt.Fprintf(b, "%s%s\n", indent, s.key.Render(k+":"))
-			writeTree(b, s, child, depth+1)
+			w.write(child, depth+1)
 		}
 	case []any:
 		for i, child := range node {
@@ -187,7 +210,7 @@ func writeTree(b *strings.Builder, s styles, v any, depth int) {
 				continue
 			}
 			fmt.Fprintf(b, "%s%s\n", indent, s.dim.Render(fmt.Sprintf("[%d]", i)))
-			writeTree(b, s, child, depth+1)
+			w.write(child, depth+1)
 		}
 	default:
 		fmt.Fprintf(b, "%s%s\n", indent, scalarString(v))
@@ -203,6 +226,43 @@ func isScalar(v any) bool {
 		return false
 	}
 	return true
+}
+
+// summarize replaces long lists of values and big maps of values (raw tables such as meminfo)
+// with their size, unless verbose.
+func (w treeWriter) summarize(v any) (string, bool) {
+	if w.verbose {
+		return "", false
+	}
+	switch t := v.(type) {
+	case []any:
+		if len(t) > maxInlineList && isScalarList(t) {
+			return fmt.Sprintf("(%d items, -v to show)", len(t)), true
+		}
+	case map[string]any:
+		if len(t) > maxScalarMap {
+			for _, c := range t {
+				if !isScalar(c) {
+					return "", false
+				}
+			}
+			return fmt.Sprintf("(%d entries, -v to show)", len(t)), true
+		}
+	}
+	return "", false
+}
+
+func isEmptyMap(v any) bool {
+	m, ok := v.(map[string]any)
+	return ok && len(m) == 0
+}
+
+// humanScalar formats a fact value, humanizing sizes, ratios and durations by key.
+func humanScalar(key string, v any) string {
+	if _, isString := v.(string); isString || v == nil {
+		return scalarString(v)
+	}
+	return humanValue(key, v)
 }
 
 func isScalarList(v any) bool {
@@ -256,12 +316,25 @@ func pad(s string, width int) string {
 	return s + strings.Repeat(" ", width-len(s))
 }
 
-// humanValue formats evidence values; keys ending in _bytes are shown in binary units.
+// humanValue formats values by key suffix: _bytes in binary units, _ratio as a percentage,
+// _seconds as a duration.
 func humanValue(key string, v any) string {
-	if strings.HasSuffix(key, "_bytes") {
+	switch {
+	case strings.HasSuffix(key, "_bytes"):
 		if n, ok := toUint(v); ok {
 			return fmt.Sprintf("%s (%d)", HumanBytes(n), n)
 		}
+	case strings.HasSuffix(key, "_ratio"):
+		if f, ok := toFloat(v); ok {
+			return fmt.Sprintf("%.1f%%", f*100)
+		}
+	case strings.HasSuffix(key, "_seconds"):
+		if f, ok := toFloat(v); ok {
+			return HumanDuration(time.Duration(f * float64(time.Second)))
+		}
+	}
+	if n, ok := v.(json.Number); ok {
+		v = numberValue(n)
 	}
 	if f, ok := v.(float64); ok {
 		return fmt.Sprintf("%.3g", f)
@@ -269,7 +342,34 @@ func humanValue(key string, v any) string {
 	return fmt.Sprint(v)
 }
 
+func numberValue(n json.Number) any {
+	if i, err := n.Int64(); err == nil {
+		return i
+	}
+	if f, err := n.Float64(); err == nil {
+		return f
+	}
+	return n.String()
+}
+
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case json.Number:
+		f, err := n.Float64()
+		return f, err == nil
+	}
+	if u, ok := toUint(v); ok {
+		return float64(u), true
+	}
+	return 0, false
+}
+
 func toUint(v any) (uint64, bool) {
+	if n, ok := v.(json.Number); ok {
+		v = numberValue(n)
+	}
 	switch n := v.(type) {
 	case uint64:
 		return n, true

@@ -31,7 +31,8 @@ func Generic(v any) (any, error) {
 }
 
 // Resolve walks the path in a generic tree. An empty path returns the whole tree.
-// Map keys match exactly or, failing that, case-insensitively; numeric segments index lists.
+// Map keys match exactly or, failing that, case-insensitively; numeric segments index lists,
+// other segments select the list element with that name (see listKeys).
 func Resolve(tree any, path string) (any, bool) {
 	if path == "" {
 		return tree, true
@@ -58,16 +59,42 @@ func walk(v any, segments []string) (any, bool) {
 			}
 			v = next
 		case []any:
-			i, err := strconv.Atoi(s)
-			if err != nil || i < 0 || i >= len(node) {
+			if i, err := strconv.Atoi(s); err == nil {
+				if i < 0 || i >= len(node) {
+					return nil, false
+				}
+				v = node[i]
+				continue
+			}
+			next, ok := findByKey(node, s)
+			if !ok {
 				return nil, false
 			}
-			v = node[i]
+			v = next
 		default:
 			return nil, false
 		}
 	}
 	return v, true
+}
+
+// listKeys are the fields that identify an element of a list: a non-numeric path segment selects
+// the element whose key field has that value (network.interfaces.eth0, storage.filesystems./srv).
+var listKeys = []string{"name", "mount_point", "id"}
+
+func findByKey(list []any, value string) (any, bool) {
+	for _, e := range list {
+		m, ok := e.(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, k := range listKeys {
+			if s, ok := m[k].(string); ok && s == value {
+				return m, true
+			}
+		}
+	}
+	return nil, false
 }
 
 func lookup(m map[string]any, key string) (any, bool) {

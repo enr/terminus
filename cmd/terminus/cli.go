@@ -18,13 +18,15 @@ import (
 	"github.com/enr/terminus/internal/engine"
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/modules/cpu"
 	"github.com/enr/terminus/internal/modules/external"
+	"github.com/enr/terminus/internal/modules/memory"
+	"github.com/enr/terminus/internal/modules/network"
+	"github.com/enr/terminus/internal/modules/storage"
 	"github.com/enr/terminus/internal/modules/system"
 	"github.com/enr/terminus/internal/output"
 	"github.com/enr/terminus/internal/query"
 	"github.com/enr/terminus/internal/runner"
-	"github.com/enr/terminus/lib/config"
-	"github.com/enr/terminus/lib/facts"
 )
 
 // globalOptions are the flags shared by every command.
@@ -170,10 +172,8 @@ type app struct {
 	env *module.Env
 }
 
-// newApp prepares the module registry and the environment. It configures lib/facts, so it must run
-// once per process, before any collection starts.
+// newApp prepares the module registry and the environment.
 func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
-	facts.Configure(config.Config{ExternalFactsDir: g.externalFactsDir, Debug: g.debug})
 	level := slog.LevelWarn
 	if g.debug {
 		level = slog.LevelDebug
@@ -185,6 +185,10 @@ func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
 	}
 	reg, err := module.NewRegistry(
 		system.New(),
+		cpu.New(),
+		memory.New(),
+		storage.New(),
+		network.New(),
 		external.New(g.externalFactsDir),
 	)
 	if err != nil {
@@ -220,6 +224,7 @@ func renderOptions(g *globalOptions, stdout io.Writer) (output.Options, error) {
 
 type factsOptions struct {
 	output     string
+	verbose    bool
 	only       []string
 	format     string
 	formatFile string
@@ -228,6 +233,7 @@ type factsOptions struct {
 func addFactsFlags(cmd *cobra.Command, fo *factsOptions) {
 	f := cmd.Flags()
 	f.StringVarP(&fo.output, "output", "o", "text", "output format: text, json")
+	f.BoolVarP(&fo.verbose, "verbose", "v", false, "show long lists and tables in full (text output)")
 	f.StringSliceVar(&fo.only, "only", nil, "run only these modules (default: core modules)")
 	f.StringVar(&fo.format, "format", "", "format the facts with the given Go template")
 	f.StringVar(&fo.formatFile, "format-file", "", "format the facts with the Go template in the given file")
@@ -292,7 +298,7 @@ func runFacts(ctx context.Context, g *globalOptions, fo *factsOptions, args []st
 	if err != nil {
 		return err
 	}
-	o.Facts = true
+	o.Facts, o.Verbose = true, fo.verbose
 	return renderer.Render(stdout, r, o)
 }
 

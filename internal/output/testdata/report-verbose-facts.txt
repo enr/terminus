@@ -6,7 +6,7 @@ Findings
   ⚠ warn  mem.available-low  only 7.3% of memory available [memory]
           hint: check memory usage
           available_bytes: 300.0 MiB (314572800)
-          available_ratio: 0.0732
+          available_ratio: 7.3%
   ✔ ok    disk.usage         42% used [/]
 
 Modules
@@ -18,11 +18,13 @@ Modules
 Facts
   podman: {}
   system:
-    Disks:
+    disks:
       [0]
-        Device: sda
-    Flags: [fpu, sse]
-    Hostname: srv-01
-    Memory:
-      Available: 300
-      Total: 4096
+        device: sda
+    flags: [fpu, sse]
+    hostname: srv-01
+    long: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    memory:
+      available_ratio: 7.3%
+      total_bytes: 4.0 GiB (4294967296)
+    uptime_seconds: 2d4h

@@ -93,7 +93,7 @@ func TestFactsJSON(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	code, out, errOut := runCLI(t, "check", "-o", "json", "--only", "system")
+	code, out, errOut := runCLI(t, "check", "-o", "json", "--only", "memory,storage")
 	var r model.Report
 	if err := json.Unmarshal([]byte(out), &r); err != nil {
 		t.Fatalf("%v (stderr %q)", err, errOut)
@@ -105,11 +105,11 @@ func TestCheck(t *testing.T) {
 		t.Errorf("exit code %d, report says %d", code, r.ExitCode())
 	}
 	if _, ok := r.Modules["external"]; ok {
-		t.Error("--only system ran the external module")
+		t.Error("--only ran the external module")
 	}
 
-	code, out, _ = runCLI(t, "check", "--only", "system", "--color", "never")
-	if !strings.Contains(out, "mem.available-low") || strings.Contains(out, "\x1b[") {
+	code, out, _ = runCLI(t, "check", "--only", "memory", "--color", "never")
+	if !strings.Contains(out, "mem.available") || strings.Contains(out, "\x1b[") {
 		t.Errorf("text output (code %d):\n%s", code, out)
 	}
 }

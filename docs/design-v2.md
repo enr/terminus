@@ -255,10 +255,10 @@ terminus probe --disruptive unit # sez. 11, esplicito
 
 ## Fasi di implementazione
 
-1. **Fondamenta**: go.mod a Go 1.23+, rimozione `vendor/`, layout `internal/`, modello Fact/Finding,
+1. ✅ **Fondamenta**: go.mod a Go 1.23+, rimozione `vendor/`, layout `internal/`, modello Fact/Finding,
    runner comandi, renderer `text` e `json` (gli altri in fase 6), build statica (`CGO_ENABLED=0`, ldflags come `.sdlc/build`),
    goreleaser per amd64/arm64.
-2. **Porting collector base** da `lib/facts/facts_all.go` e `facts_linux.go` con i bugfix; drop
+2. ✅ **Porting collector base** da `lib/facts/facts_all.go` e `facts_linux.go` con i bugfix; drop
    darwin/windows (o stub) — focus Linux.
 3. **Sistema moduli**: registry, terminus.toml, `modules list/detect`, flag enable/disable, moduli esterni.
 4. **systemd-units + cgroup + journald** e relativi check (valore più alto: sez. 3-5).

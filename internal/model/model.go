@@ -57,6 +57,30 @@ func (s *Severity) UnmarshalText(b []byte) error {
 	return fmt.Errorf("invalid severity %q", string(b))
 }
 
+// Grade maps a value to a severity: fail at or above failAt, warn at or above warnAt, ok below.
+func Grade(v, warnAt, failAt float64) Severity {
+	switch {
+	case v >= failAt:
+		return SeverityFail
+	case v >= warnAt:
+		return SeverityWarn
+	default:
+		return SeverityOK
+	}
+}
+
+// GradeBelow is Grade for values where lower is worse: fail below failBelow, warn below warnBelow.
+func GradeBelow(v, warnBelow, failBelow float64) Severity {
+	switch {
+	case v < failBelow:
+		return SeverityFail
+	case v < warnBelow:
+		return SeverityWarn
+	default:
+		return SeverityOK
+	}
+}
+
 // Finding is the result of a check.
 type Finding struct {
 	ID       string         `json:"id"`

@@ -12,7 +12,7 @@ source "${SDLC_DIR}/config"
 cd "${PRJ_HOME}"
 
 echo "--- gofmt"
-unformatted="$(gofmt -l cmd internal lib)"
+unformatted="$(gofmt -l cmd internal)"
 [[ -z "$unformatted" ]] || {
   echo "files not formatted:"
   echo "$unformatted"
@@ -27,8 +27,7 @@ go vet ./...
 
 if command -v staticcheck >/dev/null; then
   echo "--- staticcheck"
-  # lib/ is the v1 code being ported to internal/ (phase 2): not held to the new standard.
-  staticcheck ./cmd/... ./internal/...
+  staticcheck ./...
 else
   echo "--- staticcheck not installed, skipped (go install honnef.co/go/tools/cmd/staticcheck@latest)"
 fi

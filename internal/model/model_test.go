@@ -74,3 +74,12 @@ func TestExitCode(t *testing.T) {
 		}
 	}
 }
+
+func TestGrade(t *testing.T) {
+	if Grade(1, 2, 3) != SeverityOK || Grade(2, 2, 3) != SeverityWarn || Grade(5, 2, 3) != SeverityFail {
+		t.Error("Grade")
+	}
+	if GradeBelow(0.5, 0.1, 0.05) != SeverityOK || GradeBelow(0.07, 0.1, 0.05) != SeverityWarn || GradeBelow(0.01, 0.1, 0.05) != SeverityFail {
+		t.Error("GradeBelow")
+	}
+}

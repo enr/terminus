@@ -27,20 +27,36 @@
       "name": "system",
       "status": "ok",
       "facts": {
-        "Disks": [
+        "disks": [
           {
-            "Device": "sda"
+            "device": "sda"
           }
         ],
-        "Flags": [
+        "flags": [
           "fpu",
           "sse"
         ],
-        "Hostname": "srv-01",
-        "Memory": {
-          "Available": 300,
-          "Total": 4096
-        }
+        "hostname": "srv-01",
+        "long": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "memory": {
+          "available_ratio": 0.0732,
+          "total_bytes": 4294967296
+        },
+        "uptime_seconds": 187200.5
       },
       "duration_ms": 12
     }

@@ -9,11 +9,13 @@ Modules
 Facts
   podman: {}
   system:
-    Disks:
+    disks:
       [0]
-        Device: sda
-    Flags: [fpu, sse]
-    Hostname: srv-01
-    Memory:
-      Available: 300
-      Total: 4096
+        device: sda
+    flags: [fpu, sse]
+    hostname: srv-01
+    long: (13 items, -v to show)
+    memory:
+      available_ratio: 7.3%
+      total_bytes: 4.0 GiB (4294967296)
+    uptime_seconds: 2d4h

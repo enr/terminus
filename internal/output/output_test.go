@@ -28,10 +28,12 @@ func sampleReport() *model.Report {
 		Status:     model.StatusOK,
 		DurationMs: 12,
 		Facts: map[string]any{
-			"Hostname": "srv-01",
-			"Memory":   map[string]uint64{"Total": 4096, "Available": 300},
-			"Flags":    []string{"fpu", "sse"},
-			"Disks":    []map[string]string{{"Device": "sda"}},
+			"hostname":       "srv-01",
+			"memory":         map[string]any{"total_bytes": uint64(4 << 30), "available_ratio": 0.0732},
+			"uptime_seconds": 187200.5,
+			"flags":          []string{"fpu", "sse"},
+			"long":           []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
+			"disks":          []map[string]string{{"device": "sda"}},
 		},
 	}
 	r.Modules["external"] = model.ModuleResult{Name: "external", Status: model.StatusSkipped, SkipReason: "directory /etc/terminus/facts.d does not exist"}
