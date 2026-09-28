@@ -18,6 +18,8 @@ import (
 	"github.com/enr/terminus/internal/modules/journal"
 	"github.com/enr/terminus/internal/modules/memory"
 	"github.com/enr/terminus/internal/modules/network"
+	"github.com/enr/terminus/internal/modules/podman"
+	"github.com/enr/terminus/internal/modules/quadlet"
 	"github.com/enr/terminus/internal/modules/storage"
 	"github.com/enr/terminus/internal/modules/system"
 	"github.com/enr/terminus/internal/modules/systemd"
@@ -45,6 +47,8 @@ func builtinModules(externalFactsDir string) []module.Module {
 		external.New(externalFactsDir),
 		http.New(),
 		journal.New(),
+		podman.New(),
+		quadlet.New(),
 	}
 }
 
@@ -95,9 +99,12 @@ func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
 		}
 	}
 	if changed("users") {
-		if m, ok := reg.Get(systemd.Name); ok {
-			if err := m.(*systemd.Module).SetUsers(g.users); err != nil {
-				return nil, fmt.Errorf("--users: %w", err)
+		// The same users for every module that inspects users (systemd, podman, quadlet).
+		for _, m := range reg.All() {
+			if s, ok := m.(interface{ SetUsers([]string) error }); ok {
+				if err := s.SetUsers(g.users); err != nil {
+					return nil, fmt.Errorf("--users: %w", err)
+				}
 			}
 		}
 	}

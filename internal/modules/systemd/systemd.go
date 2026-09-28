@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/enr/terminus/internal/hostfs"
 	"github.com/enr/terminus/internal/module"
 	"github.com/enr/terminus/internal/runner"
+	"github.com/enr/terminus/internal/users"
 )
 
 // Name of the module.
@@ -100,7 +102,7 @@ type Unit struct {
 // Module collects the systemd facts.
 type Module struct {
 	fs      hostfs.FS
-	users   userSpec
+	users   users.Spec
 	units   []string
 	history time.Duration
 	lookup  func(string) (runner.Account, error)
@@ -111,11 +113,11 @@ type Module struct {
 func New() *Module {
 	return &Module{
 		fs:      hostfs.Host,
-		users:   userSpec{Auto: true},
+		users:   users.AutoSpec,
 		units:   []string{"*.service"},
 		history: defaultHistory,
 		lookup:  runner.LookupAccount,
-		euid:    geteuid,
+		euid:    os.Geteuid,
 	}
 }
 
@@ -144,9 +146,9 @@ history = "7d"`
 // Configure implements module.Configurable.
 func (m *Module) Configure(decode module.Decoder) error {
 	var c struct {
-		Users   *userSpec `toml:"users"`
-		Units   []string  `toml:"units"`
-		History string    `toml:"history"`
+		Users   *users.Spec `toml:"users"`
+		Units   []string    `toml:"units"`
+		History string      `toml:"history"`
 	}
 	if err := decode(&c); err != nil {
 		return err
@@ -176,14 +178,12 @@ func (m *Module) Configure(decode module.Decoder) error {
 
 // SetUsers overrides the configured users (--users flag).
 func (m *Module) SetUsers(names []string) error {
-	return m.setUsers(userSpec{Names: names})
+	return m.setUsers(users.Spec{Names: names})
 }
 
-func (m *Module) setUsers(s userSpec) error {
-	for _, n := range s.Names {
-		if _, err := m.lookup(n); err != nil {
-			return err
-		}
+func (m *Module) setUsers(s users.Spec) error {
+	if err := m.resolver().Validate(s); err != nil {
+		return err
 	}
 	m.users = s
 	return nil
@@ -209,14 +209,14 @@ func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 		f.MemTotalBytes = memTotal(lines)
 	}
 
-	users, err := m.selectUsers()
+	selected, err := m.selectUsers()
 	if err != nil {
 		errs = append(errs, err)
 	}
-	f.Users = users
+	f.Users = selected
 
 	managers := []Manager{{Name: "system"}}
-	for _, u := range users {
+	for _, u := range selected {
 		mg := Manager{Name: "user:" + u.Name, User: u.Name}
 		switch {
 		case !u.ManagerRunning:

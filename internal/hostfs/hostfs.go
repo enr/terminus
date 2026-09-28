@@ -77,6 +77,19 @@ func (f FS) Readlink(p string) (string, error) {
 	return os.Readlink(f.Path(p))
 }
 
+// Owner returns the owner uid and gid of a path (without following a final symlink).
+func (f FS) Owner(p string) (uid, gid uint32, err error) {
+	info, err := os.Lstat(f.Path(p))
+	if err != nil {
+		return 0, 0, err
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, 0, fmt.Errorf("%s: no owner information", p)
+	}
+	return st.Uid, st.Gid, nil
+}
+
 // Exists reports whether a path exists.
 func (f FS) Exists(p string) bool {
 	_, err := os.Stat(f.Path(p))

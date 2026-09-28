@@ -123,6 +123,62 @@ Skipped when the directory does not exist.
 
 # Optional modules
 
+## podman
+
+Containers of root (rootful) and of the selected users (rootless), read with the podman CLI run as
+each user: state, exit code, OOM kill, health (status, failing streak, last output), restart policy
+and count, published ports, networks, mounts, the systemd unit that runs the container
+(`PODMAN_SYSTEMD_UNIT`), CPU/memory/PIDs (`podman stats`); volumes with the containers that mount
+them, the owner of their directory on the host **and as the container sees it** (rootless user
+namespace from `/etc/subuid`/`/etc/subgid`: the user is 0, the subordinate range starts at 1),
+size and files (bounded in time); networks; `podman system df`.
+
+```toml
+[modules.podman]
+enabled = true
+users = "auto"          # as in [modules.systemd]; --users overrides it for all modules
+rootful = true
+volume_sizes = true
+```
+
+| Check | Rule |
+|---|---|
+| `podman.unhealthy` | fail: healthcheck failing |
+| `podman.no-healthcheck` | info: running container without healthcheck |
+| `podman.exited` | fail: container of a systemd unit not running; warn: other container exited with an error |
+| `podman.oom-killed` | fail: last run killed by the OOM killer |
+| `podman.restarts` | restarts done by podman: warn ≥ 3, fail ≥ 10 |
+| `podman.volume-unused` | info: volume that no container mounts |
+| `podman.storage` | info: reclaimable space |
+| `podman.scope` | root or a user not inspected, or partial data |
+
+## quadlet
+
+The quadlet files of root (`/etc/containers/systemd`, `/usr/share/containers/systemd`) and of the
+users (`~/.config/containers/systemd`, `/etc/containers/systemd/users[/<uid>]`): what they declare,
+what **the quadlet generator installed on the machine** produces (`quadlet -dryrun [-user]` on
+exactly those directories, run as the user), the state of the generated units, and the volumes
+podman really has.
+
+```toml
+[modules.quadlet]
+enabled = true
+users = "auto"
+rootful = true
+binary = ""             # default /usr/libexec/podman/quadlet or /usr/lib/podman/quadlet
+```
+
+| Check | Rule |
+|---|---|
+| `quadlet.dryrun` | fail: the generator rejects a file (its unit does not exist) or fails |
+| `quadlet.volume-not-used` | fail: `Volume=data:/x` while `data.volume` exists: podman mounts a volume named `data`, the unit (and its `VolumeName=`) is not used; confirmed by the dry run and by the volumes that exist |
+| `quadlet.network-not-used` | fail: same for `Network=` and `.network` units |
+| `quadlet.unit-not-loaded` | fail: the generated unit is not loaded (daemon-reload missing) |
+| `quadlet.unit-never-active` | warn: a `.volume`/`.network` unit inactive (dead): no container requires it |
+| `quadlet.changed-since-start` | warn: file changed after its service started: the change is not in effect |
+| `quadlet.volume-owner` | warn: the real owner of the volume (as the container sees it) differs from `User=`/`Group=` |
+| `quadlet.scope` | root or a user not inspected, or partial data |
+
 ## journal
 
 Disk space of the journal files over the size of their filesystem, and log lines per unit in the

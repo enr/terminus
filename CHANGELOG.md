@@ -27,6 +27,15 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   failures, restarts and exit codes, linger; checks systemd.failed, unit.memory-peak,
   unit.memory-limit, unit.oom-kills, unit.restarts, user.linger, resources.overcommit.
 - Optional `journal` module: journal disk usage and log lines per unit.
+- Optional `podman` module: containers of root and of the users (state, health, OOM, restarts,
+  ports, mounts, unit, stats), volumes with their owner as seen in the container, networks,
+  storage; checks podman.unhealthy, podman.exited, podman.oom-killed, podman.restarts, ...
+- Optional `quadlet` module: quadlet files, dry run with the generator of the machine, generated
+  unit states, volumes really used; checks quadlet.volume-not-used (a .volume unit not used because
+  the .container names the volume without the suffix), quadlet.network-not-used, quadlet.dryrun,
+  quadlet.unit-not-loaded, quadlet.unit-never-active, quadlet.changed-since-start,
+  quadlet.volume-owner.
+- `--users` applies to systemd, podman and quadlet.
 - Commands run as another user (root only) with the session environment of that user.
 - Output formats: `text` for humans (colors only on a terminal, `--color`, `NO_COLOR`) and
   `json` with a versioned schema (`schema_version`), per-module status, errors and timings.

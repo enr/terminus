@@ -1,0 +1,134 @@
+[
+  {
+    "AutoRemove": false,
+    "Command": [
+      "sleep",
+      "3600"
+    ],
+    "CreatedAt": "Less than a second ago",
+    "CIDFile": "",
+    "Exited": false,
+    "ExitedAt": -62135596800,
+    "ExitCode": 0,
+    "Id": "0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586",
+    "Image": "docker.io/library/alpine:3.20",
+    "ImageID": "bf8527eb54c3680e728d5b4b383a8ba730d72dae7236fbc8dff97ed6b224a731",
+    "IsInfra": false,
+    "Labels": {
+      "PODMAN_SYSTEMD_UNIT": "db.service"
+    },
+    "Mounts": [
+      "/data"
+    ],
+    "Names": [
+      "db"
+    ],
+    "Namespaces": {
+      
+    },
+    "Networks": [
+      "podman"
+    ],
+    "Pid": 1430,
+    "Pod": "",
+    "PodName": "",
+    "Ports": [
+      {
+        "host_ip": "127.0.0.1",
+        "container_port": 5432,
+        "host_port": 15432,
+        "range": 1,
+        "protocol": "tcp"
+      }
+    ],
+    "Restarts": 0,
+    "Size": null,
+    "StartedAt": 1790597716,
+    "State": "running",
+    "Status": "Up Less than a second (starting)",
+    "Created": 1790597715
+  },
+  {
+    "AutoRemove": false,
+    "Command": [
+      "sleep",
+      "3600"
+    ],
+    "CreatedAt": "Less than a second ago",
+    "CIDFile": "",
+    "Exited": false,
+    "ExitedAt": -62135596800,
+    "ExitCode": 0,
+    "Id": "7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54",
+    "Image": "docker.io/library/alpine:3.20",
+    "ImageID": "bf8527eb54c3680e728d5b4b383a8ba730d72dae7236fbc8dff97ed6b224a731",
+    "IsInfra": false,
+    "Labels": null,
+    "Mounts": [],
+    "Names": [
+      "web"
+    ],
+    "Namespaces": {
+      
+    },
+    "Networks": [
+      "podman"
+    ],
+    "Pid": 1498,
+    "Pod": "",
+    "PodName": "",
+    "Ports": [
+      {
+        "host_ip": "",
+        "container_port": 80,
+        "host_port": 18080,
+        "range": 1,
+        "protocol": "tcp"
+      }
+    ],
+    "Restarts": 0,
+    "Size": null,
+    "StartedAt": 1790597716,
+    "State": "running",
+    "Status": "Up Less than a second",
+    "Created": 1790597716
+  },
+  {
+    "AutoRemove": false,
+    "Command": [
+      "sh",
+      "-c",
+      "exit 3"
+    ],
+    "CreatedAt": "Less than a second ago",
+    "CIDFile": "",
+    "Exited": true,
+    "ExitedAt": 1790597716,
+    "ExitCode": 3,
+    "Id": "148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2",
+    "Image": "docker.io/library/alpine:3.20",
+    "ImageID": "bf8527eb54c3680e728d5b4b383a8ba730d72dae7236fbc8dff97ed6b224a731",
+    "IsInfra": false,
+    "Labels": null,
+    "Mounts": [],
+    "Names": [
+      "crashed"
+    ],
+    "Namespaces": {
+      
+    },
+    "Networks": [
+      "podman"
+    ],
+    "Pid": 0,
+    "Pod": "",
+    "PodName": "",
+    "Ports": null,
+    "Restarts": 0,
+    "Size": null,
+    "StartedAt": 1790597716,
+    "State": "exited",
+    "Status": "Exited (3) Less than a second ago",
+    "Created": 1790597716
+  }
+]

@@ -1,0 +1,891 @@
+[
+     {
+          "Id": "0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586",
+          "Created": "2026-09-28T12:15:15.920590926Z",
+          "Path": "sleep",
+          "Args": [
+               "3600"
+          ],
+          "State": {
+               "OciVersion": "1.1.0",
+               "Status": "running",
+               "Running": true,
+               "Paused": false,
+               "Restarting": false,
+               "OOMKilled": false,
+               "Dead": false,
+               "Pid": 1430,
+               "ConmonPid": 1416,
+               "ExitCode": 0,
+               "Error": "",
+               "StartedAt": "2026-09-28T12:15:16.203999828Z",
+               "FinishedAt": "0001-01-01T00:00:00Z",
+               "Health": {
+                    "Status": "unhealthy",
+                    "FailingStreak": 3,
+                    "Log": [
+                         {
+                              "Start": "2026-09-28T12:15:22.70128593Z",
+                              "End": "2026-09-28T12:15:22.831282954Z",
+                              "ExitCode": 1,
+                              "Output": ""
+                         },
+                         {
+                              "Start": "2026-09-28T12:15:22.868483928Z",
+                              "End": "2026-09-28T12:15:22.982802479Z",
+                              "ExitCode": 1,
+                              "Output": ""
+                         },
+                         {
+                              "Start": "2026-09-28T12:15:23.018837628Z",
+                              "End": "2026-09-28T12:15:23.161501671Z",
+                              "ExitCode": 1,
+                              "Output": ""
+                         }
+                    ]
+               },
+               "CgroupPath": "/libpod_parent/libpod-0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586",
+               "CheckpointedAt": "0001-01-01T00:00:00Z",
+               "RestoredAt": "0001-01-01T00:00:00Z"
+          },
+          "Image": "bf8527eb54c3680e728d5b4b383a8ba730d72dae7236fbc8dff97ed6b224a731",
+          "ImageDigest": "sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+          "ImageName": "docker.io/library/alpine:3.20",
+          "Rootfs": "",
+          "Pod": "",
+          "ResolvConfPath": "/run/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata/resolv.conf",
+          "HostnamePath": "/run/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata/hostname",
+          "HostsPath": "/run/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata/hosts",
+          "StaticDir": "/var/lib/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata",
+          "OCIConfigPath": "/var/lib/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata/config.json",
+          "OCIRuntime": "runc",
+          "ConmonPidFile": "/run/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata/conmon.pid",
+          "PidFile": "/run/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata/pidfile",
+          "Name": "db",
+          "RestartCount": 0,
+          "Driver": "overlay",
+          "MountLabel": "",
+          "ProcessLabel": "",
+          "AppArmorProfile": "",
+          "EffectiveCaps": [
+               "CAP_CHOWN",
+               "CAP_DAC_OVERRIDE",
+               "CAP_FOWNER",
+               "CAP_FSETID",
+               "CAP_KILL",
+               "CAP_NET_BIND_SERVICE",
+               "CAP_SETFCAP",
+               "CAP_SETGID",
+               "CAP_SETPCAP",
+               "CAP_SETUID",
+               "CAP_SYS_CHROOT"
+          ],
+          "BoundingCaps": [
+               "CAP_CHOWN",
+               "CAP_DAC_OVERRIDE",
+               "CAP_FOWNER",
+               "CAP_FSETID",
+               "CAP_KILL",
+               "CAP_NET_BIND_SERVICE",
+               "CAP_SETFCAP",
+               "CAP_SETGID",
+               "CAP_SETPCAP",
+               "CAP_SETUID",
+               "CAP_SYS_CHROOT"
+          ],
+          "ExecIDs": [],
+          "GraphDriver": {
+               "Name": "overlay",
+               "Data": {
+                    "LowerDir": "/var/lib/containers/storage/overlay/08bc4e534116aa76b16015484b82eac51f9a593416feae9296c8a2d4bb7aa4a2/diff",
+                    "MergedDir": "/var/lib/containers/storage/overlay/65fad79494229784306b35102ec2bd6a0a0526468e807a1b01fad32dc6e7dd55/merged",
+                    "UpperDir": "/var/lib/containers/storage/overlay/65fad79494229784306b35102ec2bd6a0a0526468e807a1b01fad32dc6e7dd55/diff",
+                    "WorkDir": "/var/lib/containers/storage/overlay/65fad79494229784306b35102ec2bd6a0a0526468e807a1b01fad32dc6e7dd55/work"
+               }
+          },
+          "Mounts": [
+               {
+                    "Type": "volume",
+                    "Name": "pgdata",
+                    "Source": "/var/lib/containers/storage/volumes/pgdata/_data",
+                    "Destination": "/data",
+                    "Driver": "local",
+                    "Mode": "",
+                    "Options": [
+                         "nosuid",
+                         "nodev",
+                         "rbind"
+                    ],
+                    "RW": true,
+                    "Propagation": "rprivate"
+               }
+          ],
+          "Dependencies": [],
+          "NetworkSettings": {
+               "EndpointID": "",
+               "Gateway": "10.88.0.1",
+               "IPAddress": "10.88.0.2",
+               "IPPrefixLen": 16,
+               "IPv6Gateway": "",
+               "GlobalIPv6Address": "",
+               "GlobalIPv6PrefixLen": 0,
+               "MacAddress": "c6:51:0e:72:43:28",
+               "Bridge": "",
+               "SandboxID": "",
+               "HairpinMode": false,
+               "LinkLocalIPv6Address": "",
+               "LinkLocalIPv6PrefixLen": 0,
+               "Ports": {
+                    "5432/tcp": [
+                         {
+                              "HostIp": "127.0.0.1",
+                              "HostPort": "15432"
+                         }
+                    ]
+               },
+               "SandboxKey": "/run/netns/netns-7326afde-5404-3079-98bc-f0ca7df2fbbd",
+               "Networks": {
+                    "podman": {
+                         "EndpointID": "",
+                         "Gateway": "10.88.0.1",
+                         "IPAddress": "10.88.0.2",
+                         "IPPrefixLen": 16,
+                         "IPv6Gateway": "",
+                         "GlobalIPv6Address": "",
+                         "GlobalIPv6PrefixLen": 0,
+                         "MacAddress": "c6:51:0e:72:43:28",
+                         "NetworkID": "podman",
+                         "DriverOpts": null,
+                         "IPAMConfig": null,
+                         "Links": null,
+                         "Aliases": [
+                              "0adac39120d7"
+                         ]
+                    }
+               }
+          },
+          "Namespace": "",
+          "IsInfra": false,
+          "IsService": false,
+          "KubeExitCodePropagation": "invalid",
+          "lockNumber": 2,
+          "Config": {
+               "Hostname": "0adac39120d7",
+               "Domainname": "",
+               "User": "",
+               "AttachStdin": false,
+               "AttachStdout": false,
+               "AttachStderr": false,
+               "Tty": false,
+               "OpenStdin": false,
+               "StdinOnce": false,
+               "Env": [
+                    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    "container=podman",
+                    "no_proxy=localhost,127.0.0.1,::1,127.0.0.0/8,0.0.0.0/8,::,169.254.0.0/16,api.anthropic.com,api-staging.anthropic.com,api-pr-preview.anthropic.com,mcp-proxy.anthropic.com,mcp-proxy-staging.anthropic.com,registry.npmjs.org,jsr.io,npm.jsr.io,pypi.org,files.pythonhosted.org,index.crates.io,proxy.golang.org,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.svc.cluster.local,*.svc.cluster.local",
+                    "HTTPS_PROXY=http://127.0.0.1:35251",
+                    "NO_PROXY=localhost,127.0.0.1,::1,127.0.0.0/8,0.0.0.0/8,::,169.254.0.0/16,api.anthropic.com,api-staging.anthropic.com,api-pr-preview.anthropic.com,mcp-proxy.anthropic.com,mcp-proxy-staging.anthropic.com,registry.npmjs.org,jsr.io,npm.jsr.io,pypi.org,files.pythonhosted.org,index.crates.io,proxy.golang.org,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.svc.cluster.local,*.svc.cluster.local",
+                    "https_proxy=http://127.0.0.1:35251",
+                    "HOME=/root",
+                    "HOSTNAME=0adac39120d7"
+               ],
+               "Cmd": [
+                    "sleep",
+                    "3600"
+               ],
+               "Image": "docker.io/library/alpine:3.20",
+               "Volumes": null,
+               "WorkingDir": "/",
+               "Entrypoint": "",
+               "OnBuild": null,
+               "Labels": {
+                    "PODMAN_SYSTEMD_UNIT": "db.service"
+               },
+               "Annotations": {
+                    "io.container.manager": "libpod",
+                    "org.opencontainers.image.stopSignal": "15"
+               },
+               "StopSignal": 15,
+               "Healthcheck": {
+                    "Test": [
+                         "CMD-SHELL",
+                         "test -f /data/ok"
+                    ],
+                    "Interval": 30000000000,
+                    "Timeout": 30000000000,
+                    "Retries": 3
+               },
+               "HealthcheckOnFailureAction": "none",
+               "CreateCommand": [
+                    "podman",
+                    "run",
+                    "-d",
+                    "--name",
+                    "db",
+                    "-v",
+                    "pgdata:/data",
+                    "-p",
+                    "127.0.0.1:15432:5432",
+                    "--label",
+                    "PODMAN_SYSTEMD_UNIT=db.service",
+                    "--restart",
+                    "on-failure",
+                    "--health-cmd",
+                    "test -f /data/ok",
+                    "--health-interval",
+                    "30s",
+                    "docker.io/library/alpine:3.20",
+                    "sleep",
+                    "3600"
+               ],
+               "Umask": "0022",
+               "Timeout": 0,
+               "StopTimeout": 10,
+               "Passwd": true,
+               "sdNotifyMode": "container"
+          },
+          "HostConfig": {
+               "Binds": [
+                    "pgdata:/data:rw,rprivate,nosuid,nodev,rbind"
+               ],
+               "CgroupManager": "cgroupfs",
+               "CgroupMode": "host",
+               "ContainerIDFile": "",
+               "LogConfig": {
+                    "Type": "k8s-file",
+                    "Config": null,
+                    "Path": "/var/lib/containers/storage/overlay-containers/0adac39120d79345e3cd010a6e8248ddcf477b034beb3464019def6c85649586/userdata/ctr.log",
+                    "Tag": "",
+                    "Size": "0B"
+               },
+               "NetworkMode": "bridge",
+               "PortBindings": {
+                    "5432/tcp": [
+                         {
+                              "HostIp": "127.0.0.1",
+                              "HostPort": "15432"
+                         }
+                    ]
+               },
+               "RestartPolicy": {
+                    "Name": "on-failure",
+                    "MaximumRetryCount": 0
+               },
+               "AutoRemove": false,
+               "VolumeDriver": "",
+               "VolumesFrom": null,
+               "CapAdd": [],
+               "CapDrop": [],
+               "Dns": [],
+               "DnsOptions": [],
+               "DnsSearch": [],
+               "ExtraHosts": [],
+               "GroupAdd": [],
+               "IpcMode": "shareable",
+               "Cgroup": "",
+               "Cgroups": "default",
+               "Links": null,
+               "OomScoreAdj": 0,
+               "PidMode": "private",
+               "Privileged": false,
+               "PublishAllPorts": false,
+               "ReadonlyRootfs": false,
+               "SecurityOpt": [],
+               "Tmpfs": {},
+               "UTSMode": "private",
+               "UsernsMode": "",
+               "ShmSize": 65536000,
+               "Runtime": "oci",
+               "ConsoleSize": [
+                    0,
+                    0
+               ],
+               "Isolation": "",
+               "CpuShares": 0,
+               "Memory": 0,
+               "NanoCpus": 0,
+               "CgroupParent": "",
+               "BlkioWeight": 0,
+               "BlkioWeightDevice": null,
+               "BlkioDeviceReadBps": null,
+               "BlkioDeviceWriteBps": null,
+               "BlkioDeviceReadIOps": null,
+               "BlkioDeviceWriteIOps": null,
+               "CpuPeriod": 0,
+               "CpuQuota": 0,
+               "CpuRealtimePeriod": 0,
+               "CpuRealtimeRuntime": 0,
+               "CpusetCpus": "",
+               "CpusetMems": "",
+               "Devices": [],
+               "DiskQuota": 0,
+               "KernelMemory": 0,
+               "MemoryReservation": 0,
+               "MemorySwap": 0,
+               "MemorySwappiness": 0,
+               "OomKillDisable": false,
+               "PidsLimit": 2048,
+               "Ulimits": [
+                    {
+                         "Name": "RLIMIT_NPROC",
+                         "Soft": 32768,
+                         "Hard": 32768
+                    }
+               ],
+               "CpuCount": 0,
+               "CpuPercent": 0,
+               "IOMaximumIOps": 0,
+               "IOMaximumBandwidth": 0,
+               "CgroupConf": null
+          }
+     },
+     {
+          "Id": "7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54",
+          "Created": "2026-09-28T12:15:16.240418161Z",
+          "Path": "sleep",
+          "Args": [
+               "3600"
+          ],
+          "State": {
+               "OciVersion": "1.1.0",
+               "Status": "running",
+               "Running": true,
+               "Paused": false,
+               "Restarting": false,
+               "OOMKilled": false,
+               "Dead": false,
+               "Pid": 1498,
+               "ConmonPid": 1484,
+               "ExitCode": 0,
+               "Error": "",
+               "StartedAt": "2026-09-28T12:15:16.431481411Z",
+               "FinishedAt": "0001-01-01T00:00:00Z",
+               "Health": {
+                    "Status": "",
+                    "FailingStreak": 0,
+                    "Log": null
+               },
+               "CgroupPath": "/libpod_parent/libpod-7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54",
+               "CheckpointedAt": "0001-01-01T00:00:00Z",
+               "RestoredAt": "0001-01-01T00:00:00Z"
+          },
+          "Image": "bf8527eb54c3680e728d5b4b383a8ba730d72dae7236fbc8dff97ed6b224a731",
+          "ImageDigest": "sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+          "ImageName": "docker.io/library/alpine:3.20",
+          "Rootfs": "",
+          "Pod": "",
+          "ResolvConfPath": "/run/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata/resolv.conf",
+          "HostnamePath": "/run/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata/hostname",
+          "HostsPath": "/run/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata/hosts",
+          "StaticDir": "/var/lib/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata",
+          "OCIConfigPath": "/var/lib/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata/config.json",
+          "OCIRuntime": "runc",
+          "ConmonPidFile": "/run/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata/conmon.pid",
+          "PidFile": "/run/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata/pidfile",
+          "Name": "web",
+          "RestartCount": 0,
+          "Driver": "overlay",
+          "MountLabel": "",
+          "ProcessLabel": "",
+          "AppArmorProfile": "",
+          "EffectiveCaps": [
+               "CAP_CHOWN",
+               "CAP_DAC_OVERRIDE",
+               "CAP_FOWNER",
+               "CAP_FSETID",
+               "CAP_KILL",
+               "CAP_NET_BIND_SERVICE",
+               "CAP_SETFCAP",
+               "CAP_SETGID",
+               "CAP_SETPCAP",
+               "CAP_SETUID",
+               "CAP_SYS_CHROOT"
+          ],
+          "BoundingCaps": [
+               "CAP_CHOWN",
+               "CAP_DAC_OVERRIDE",
+               "CAP_FOWNER",
+               "CAP_FSETID",
+               "CAP_KILL",
+               "CAP_NET_BIND_SERVICE",
+               "CAP_SETFCAP",
+               "CAP_SETGID",
+               "CAP_SETPCAP",
+               "CAP_SETUID",
+               "CAP_SYS_CHROOT"
+          ],
+          "ExecIDs": [],
+          "GraphDriver": {
+               "Name": "overlay",
+               "Data": {
+                    "LowerDir": "/var/lib/containers/storage/overlay/08bc4e534116aa76b16015484b82eac51f9a593416feae9296c8a2d4bb7aa4a2/diff",
+                    "MergedDir": "/var/lib/containers/storage/overlay/e68564022ea492d55d322d34be85463f591b172ec1ca14a28aa1bfad5c8ac927/merged",
+                    "UpperDir": "/var/lib/containers/storage/overlay/e68564022ea492d55d322d34be85463f591b172ec1ca14a28aa1bfad5c8ac927/diff",
+                    "WorkDir": "/var/lib/containers/storage/overlay/e68564022ea492d55d322d34be85463f591b172ec1ca14a28aa1bfad5c8ac927/work"
+               }
+          },
+          "Mounts": [],
+          "Dependencies": [],
+          "NetworkSettings": {
+               "EndpointID": "",
+               "Gateway": "10.88.0.1",
+               "IPAddress": "10.88.0.3",
+               "IPPrefixLen": 16,
+               "IPv6Gateway": "",
+               "GlobalIPv6Address": "",
+               "GlobalIPv6PrefixLen": 0,
+               "MacAddress": "de:6e:c8:07:03:e3",
+               "Bridge": "",
+               "SandboxID": "",
+               "HairpinMode": false,
+               "LinkLocalIPv6Address": "",
+               "LinkLocalIPv6PrefixLen": 0,
+               "Ports": {
+                    "80/tcp": [
+                         {
+                              "HostIp": "",
+                              "HostPort": "18080"
+                         }
+                    ]
+               },
+               "SandboxKey": "/run/netns/netns-1183ab64-c43f-335c-be84-0304f4fa6804",
+               "Networks": {
+                    "podman": {
+                         "EndpointID": "",
+                         "Gateway": "10.88.0.1",
+                         "IPAddress": "10.88.0.3",
+                         "IPPrefixLen": 16,
+                         "IPv6Gateway": "",
+                         "GlobalIPv6Address": "",
+                         "GlobalIPv6PrefixLen": 0,
+                         "MacAddress": "de:6e:c8:07:03:e3",
+                         "NetworkID": "podman",
+                         "DriverOpts": null,
+                         "IPAMConfig": null,
+                         "Links": null,
+                         "Aliases": [
+                              "7bacfcc8077f"
+                         ]
+                    }
+               }
+          },
+          "Namespace": "",
+          "IsInfra": false,
+          "IsService": false,
+          "KubeExitCodePropagation": "invalid",
+          "lockNumber": 3,
+          "Config": {
+               "Hostname": "7bacfcc8077f",
+               "Domainname": "",
+               "User": "",
+               "AttachStdin": false,
+               "AttachStdout": false,
+               "AttachStderr": false,
+               "Tty": false,
+               "OpenStdin": false,
+               "StdinOnce": false,
+               "Env": [
+                    "no_proxy=localhost,127.0.0.1,::1,127.0.0.0/8,0.0.0.0/8,::,169.254.0.0/16,api.anthropic.com,api-staging.anthropic.com,api-pr-preview.anthropic.com,mcp-proxy.anthropic.com,mcp-proxy-staging.anthropic.com,registry.npmjs.org,jsr.io,npm.jsr.io,pypi.org,files.pythonhosted.org,index.crates.io,proxy.golang.org,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.svc.cluster.local,*.svc.cluster.local",
+                    "HTTPS_PROXY=http://127.0.0.1:35251",
+                    "NO_PROXY=localhost,127.0.0.1,::1,127.0.0.0/8,0.0.0.0/8,::,169.254.0.0/16,api.anthropic.com,api-staging.anthropic.com,api-pr-preview.anthropic.com,mcp-proxy.anthropic.com,mcp-proxy-staging.anthropic.com,registry.npmjs.org,jsr.io,npm.jsr.io,pypi.org,files.pythonhosted.org,index.crates.io,proxy.golang.org,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.svc.cluster.local,*.svc.cluster.local",
+                    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    "container=podman",
+                    "https_proxy=http://127.0.0.1:35251",
+                    "HOME=/root",
+                    "HOSTNAME=7bacfcc8077f"
+               ],
+               "Cmd": [
+                    "sleep",
+                    "3600"
+               ],
+               "Image": "docker.io/library/alpine:3.20",
+               "Volumes": null,
+               "WorkingDir": "/",
+               "Entrypoint": "",
+               "OnBuild": null,
+               "Labels": null,
+               "Annotations": {
+                    "io.container.manager": "libpod",
+                    "org.opencontainers.image.stopSignal": "15"
+               },
+               "StopSignal": 15,
+               "HealthcheckOnFailureAction": "none",
+               "CreateCommand": [
+                    "podman",
+                    "run",
+                    "-d",
+                    "--name",
+                    "web",
+                    "--network",
+                    "podman",
+                    "-p",
+                    "18080:80",
+                    "docker.io/library/alpine:3.20",
+                    "sleep",
+                    "3600"
+               ],
+               "Umask": "0022",
+               "Timeout": 0,
+               "StopTimeout": 10,
+               "Passwd": true,
+               "sdNotifyMode": "container"
+          },
+          "HostConfig": {
+               "Binds": [],
+               "CgroupManager": "cgroupfs",
+               "CgroupMode": "host",
+               "ContainerIDFile": "",
+               "LogConfig": {
+                    "Type": "k8s-file",
+                    "Config": null,
+                    "Path": "/var/lib/containers/storage/overlay-containers/7bacfcc8077f716563b04369c481eca249f0af8326a63a32156fee72ce916f54/userdata/ctr.log",
+                    "Tag": "",
+                    "Size": "0B"
+               },
+               "NetworkMode": "bridge",
+               "PortBindings": {
+                    "80/tcp": [
+                         {
+                              "HostIp": "",
+                              "HostPort": "18080"
+                         }
+                    ]
+               },
+               "RestartPolicy": {
+                    "Name": "",
+                    "MaximumRetryCount": 0
+               },
+               "AutoRemove": false,
+               "VolumeDriver": "",
+               "VolumesFrom": null,
+               "CapAdd": [],
+               "CapDrop": [],
+               "Dns": [],
+               "DnsOptions": [],
+               "DnsSearch": [],
+               "ExtraHosts": [],
+               "GroupAdd": [],
+               "IpcMode": "shareable",
+               "Cgroup": "",
+               "Cgroups": "default",
+               "Links": null,
+               "OomScoreAdj": 0,
+               "PidMode": "private",
+               "Privileged": false,
+               "PublishAllPorts": false,
+               "ReadonlyRootfs": false,
+               "SecurityOpt": [],
+               "Tmpfs": {},
+               "UTSMode": "private",
+               "UsernsMode": "",
+               "ShmSize": 65536000,
+               "Runtime": "oci",
+               "ConsoleSize": [
+                    0,
+                    0
+               ],
+               "Isolation": "",
+               "CpuShares": 0,
+               "Memory": 0,
+               "NanoCpus": 0,
+               "CgroupParent": "",
+               "BlkioWeight": 0,
+               "BlkioWeightDevice": null,
+               "BlkioDeviceReadBps": null,
+               "BlkioDeviceWriteBps": null,
+               "BlkioDeviceReadIOps": null,
+               "BlkioDeviceWriteIOps": null,
+               "CpuPeriod": 0,
+               "CpuQuota": 0,
+               "CpuRealtimePeriod": 0,
+               "CpuRealtimeRuntime": 0,
+               "CpusetCpus": "",
+               "CpusetMems": "",
+               "Devices": [],
+               "DiskQuota": 0,
+               "KernelMemory": 0,
+               "MemoryReservation": 0,
+               "MemorySwap": 0,
+               "MemorySwappiness": 0,
+               "OomKillDisable": false,
+               "PidsLimit": 2048,
+               "Ulimits": [
+                    {
+                         "Name": "RLIMIT_NPROC",
+                         "Soft": 32768,
+                         "Hard": 32768
+                    }
+               ],
+               "CpuCount": 0,
+               "CpuPercent": 0,
+               "IOMaximumIOps": 0,
+               "IOMaximumBandwidth": 0,
+               "CgroupConf": null
+          }
+     },
+     {
+          "Id": "148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2",
+          "Created": "2026-09-28T12:15:16.46451565Z",
+          "Path": "sh",
+          "Args": [
+               "-c",
+               "exit 3"
+          ],
+          "State": {
+               "OciVersion": "1.1.0",
+               "Status": "exited",
+               "Running": false,
+               "Paused": false,
+               "Restarting": false,
+               "OOMKilled": false,
+               "Dead": false,
+               "Pid": 0,
+               "ExitCode": 3,
+               "Error": "",
+               "StartedAt": "2026-09-28T12:15:16.639123621Z",
+               "FinishedAt": "2026-09-28T12:15:16.639526014Z",
+               "Health": {
+                    "Status": "",
+                    "FailingStreak": 0,
+                    "Log": null
+               },
+               "CheckpointedAt": "0001-01-01T00:00:00Z",
+               "RestoredAt": "0001-01-01T00:00:00Z"
+          },
+          "Image": "bf8527eb54c3680e728d5b4b383a8ba730d72dae7236fbc8dff97ed6b224a731",
+          "ImageDigest": "sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+          "ImageName": "docker.io/library/alpine:3.20",
+          "Rootfs": "",
+          "Pod": "",
+          "ResolvConfPath": "/run/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata/resolv.conf",
+          "HostnamePath": "/run/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata/hostname",
+          "HostsPath": "/run/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata/hosts",
+          "StaticDir": "/var/lib/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata",
+          "OCIConfigPath": "/var/lib/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata/config.json",
+          "OCIRuntime": "runc",
+          "ConmonPidFile": "/run/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata/conmon.pid",
+          "PidFile": "/run/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata/pidfile",
+          "Name": "crashed",
+          "RestartCount": 0,
+          "Driver": "overlay",
+          "MountLabel": "",
+          "ProcessLabel": "",
+          "AppArmorProfile": "",
+          "EffectiveCaps": [
+               "CAP_CHOWN",
+               "CAP_DAC_OVERRIDE",
+               "CAP_FOWNER",
+               "CAP_FSETID",
+               "CAP_KILL",
+               "CAP_NET_BIND_SERVICE",
+               "CAP_SETFCAP",
+               "CAP_SETGID",
+               "CAP_SETPCAP",
+               "CAP_SETUID",
+               "CAP_SYS_CHROOT"
+          ],
+          "BoundingCaps": [
+               "CAP_CHOWN",
+               "CAP_DAC_OVERRIDE",
+               "CAP_FOWNER",
+               "CAP_FSETID",
+               "CAP_KILL",
+               "CAP_NET_BIND_SERVICE",
+               "CAP_SETFCAP",
+               "CAP_SETGID",
+               "CAP_SETPCAP",
+               "CAP_SETUID",
+               "CAP_SYS_CHROOT"
+          ],
+          "ExecIDs": [],
+          "GraphDriver": {
+               "Name": "overlay",
+               "Data": {
+                    "LowerDir": "/var/lib/containers/storage/overlay/08bc4e534116aa76b16015484b82eac51f9a593416feae9296c8a2d4bb7aa4a2/diff",
+                    "UpperDir": "/var/lib/containers/storage/overlay/6f2d4bf35a76f8976d95930d26e0c0676020b124520215695ca4027d3d92d606/diff",
+                    "WorkDir": "/var/lib/containers/storage/overlay/6f2d4bf35a76f8976d95930d26e0c0676020b124520215695ca4027d3d92d606/work"
+               }
+          },
+          "Mounts": [],
+          "Dependencies": [],
+          "NetworkSettings": {
+               "EndpointID": "",
+               "Gateway": "",
+               "IPAddress": "",
+               "IPPrefixLen": 0,
+               "IPv6Gateway": "",
+               "GlobalIPv6Address": "",
+               "GlobalIPv6PrefixLen": 0,
+               "MacAddress": "",
+               "Bridge": "",
+               "SandboxID": "",
+               "HairpinMode": false,
+               "LinkLocalIPv6Address": "",
+               "LinkLocalIPv6PrefixLen": 0,
+               "Ports": {},
+               "SandboxKey": "",
+               "Networks": {
+                    "podman": {
+                         "EndpointID": "",
+                         "Gateway": "",
+                         "IPAddress": "",
+                         "IPPrefixLen": 0,
+                         "IPv6Gateway": "",
+                         "GlobalIPv6Address": "",
+                         "GlobalIPv6PrefixLen": 0,
+                         "MacAddress": "",
+                         "NetworkID": "podman",
+                         "DriverOpts": null,
+                         "IPAMConfig": null,
+                         "Links": null,
+                         "Aliases": [
+                              "148ed6f52f4a"
+                         ]
+                    }
+               }
+          },
+          "Namespace": "",
+          "IsInfra": false,
+          "IsService": false,
+          "KubeExitCodePropagation": "invalid",
+          "lockNumber": 4,
+          "Config": {
+               "Hostname": "148ed6f52f4a",
+               "Domainname": "",
+               "User": "",
+               "AttachStdin": false,
+               "AttachStdout": false,
+               "AttachStderr": false,
+               "Tty": false,
+               "OpenStdin": false,
+               "StdinOnce": false,
+               "Env": [
+                    "no_proxy=localhost,127.0.0.1,::1,127.0.0.0/8,0.0.0.0/8,::,169.254.0.0/16,api.anthropic.com,api-staging.anthropic.com,api-pr-preview.anthropic.com,mcp-proxy.anthropic.com,mcp-proxy-staging.anthropic.com,registry.npmjs.org,jsr.io,npm.jsr.io,pypi.org,files.pythonhosted.org,index.crates.io,proxy.golang.org,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.svc.cluster.local,*.svc.cluster.local",
+                    "HTTPS_PROXY=http://127.0.0.1:35251",
+                    "NO_PROXY=localhost,127.0.0.1,::1,127.0.0.0/8,0.0.0.0/8,::,169.254.0.0/16,api.anthropic.com,api-staging.anthropic.com,api-pr-preview.anthropic.com,mcp-proxy.anthropic.com,mcp-proxy-staging.anthropic.com,registry.npmjs.org,jsr.io,npm.jsr.io,pypi.org,files.pythonhosted.org,index.crates.io,proxy.golang.org,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,.svc.cluster.local,*.svc.cluster.local",
+                    "https_proxy=http://127.0.0.1:35251",
+                    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    "container=podman",
+                    "HOME=/root",
+                    "HOSTNAME=148ed6f52f4a"
+               ],
+               "Cmd": [
+                    "sh",
+                    "-c",
+                    "exit 3"
+               ],
+               "Image": "docker.io/library/alpine:3.20",
+               "Volumes": null,
+               "WorkingDir": "/",
+               "Entrypoint": "",
+               "OnBuild": null,
+               "Labels": null,
+               "Annotations": {
+                    "io.container.manager": "libpod",
+                    "org.opencontainers.image.stopSignal": "15"
+               },
+               "StopSignal": 15,
+               "HealthcheckOnFailureAction": "none",
+               "CreateCommand": [
+                    "podman",
+                    "run",
+                    "--name",
+                    "crashed",
+                    "docker.io/library/alpine:3.20",
+                    "sh",
+                    "-c",
+                    "exit 3"
+               ],
+               "Umask": "0022",
+               "Timeout": 0,
+               "StopTimeout": 10,
+               "Passwd": true,
+               "sdNotifyMode": "container"
+          },
+          "HostConfig": {
+               "Binds": [],
+               "CgroupManager": "cgroupfs",
+               "CgroupMode": "host",
+               "ContainerIDFile": "",
+               "LogConfig": {
+                    "Type": "k8s-file",
+                    "Config": null,
+                    "Path": "/var/lib/containers/storage/overlay-containers/148ed6f52f4a00954d7d4ce4bbd3dfe268ee888147f48f0a1293ee50cf910dc2/userdata/ctr.log",
+                    "Tag": "",
+                    "Size": "0B"
+               },
+               "NetworkMode": "bridge",
+               "PortBindings": {},
+               "RestartPolicy": {
+                    "Name": "",
+                    "MaximumRetryCount": 0
+               },
+               "AutoRemove": false,
+               "VolumeDriver": "",
+               "VolumesFrom": null,
+               "CapAdd": [],
+               "CapDrop": [],
+               "Dns": [],
+               "DnsOptions": [],
+               "DnsSearch": [],
+               "ExtraHosts": [],
+               "GroupAdd": [],
+               "IpcMode": "shareable",
+               "Cgroup": "",
+               "Cgroups": "default",
+               "Links": null,
+               "OomScoreAdj": 0,
+               "PidMode": "private",
+               "Privileged": false,
+               "PublishAllPorts": false,
+               "ReadonlyRootfs": false,
+               "SecurityOpt": [],
+               "Tmpfs": {},
+               "UTSMode": "private",
+               "UsernsMode": "",
+               "ShmSize": 65536000,
+               "Runtime": "oci",
+               "ConsoleSize": [
+                    0,
+                    0
+               ],
+               "Isolation": "",
+               "CpuShares": 0,
+               "Memory": 0,
+               "NanoCpus": 0,
+               "CgroupParent": "",
+               "BlkioWeight": 0,
+               "BlkioWeightDevice": null,
+               "BlkioDeviceReadBps": null,
+               "BlkioDeviceWriteBps": null,
+               "BlkioDeviceReadIOps": null,
+               "BlkioDeviceWriteIOps": null,
+               "CpuPeriod": 0,
+               "CpuQuota": 0,
+               "CpuRealtimePeriod": 0,
+               "CpuRealtimeRuntime": 0,
+               "CpusetCpus": "",
+               "CpusetMems": "",
+               "Devices": [],
+               "DiskQuota": 0,
+               "KernelMemory": 0,
+               "MemoryReservation": 0,
+               "MemorySwap": 0,
+               "MemorySwappiness": 0,
+               "OomKillDisable": false,
+               "PidsLimit": 2048,
+               "Ulimits": [
+                    {
+                         "Name": "RLIMIT_NPROC",
+                         "Soft": 32768,
+                         "Hard": 32768
+                    }
+               ],
+               "CpuCount": 0,
+               "CpuPercent": 0,
+               "IOMaximumIOps": 0,
+               "IOMaximumBandwidth": 0,
+               "CgroupConf": null
+          }
+     }
+]

@@ -1,0 +1,62 @@
+---app-network.service---
+[X-Network]
+Subnet=10.90.0.0/24
+
+[Unit]
+RequiresMountsFor=%t/containers
+
+[Service]
+ExecStart=/usr/bin/podman network create --ignore --subnet=10.90.0.0/24 systemd-app
+Type=oneshot
+RemainAfterExit=yes
+SyslogIdentifier=%N
+
+---pgdata-volume.service---
+[X-Volume]
+VolumeName=pgdata-vol
+User=999
+Group=999
+
+[Unit]
+RequiresMountsFor=%t/containers
+
+[Service]
+ExecStart=/usr/bin/podman volume create --ignore --opt o=uid=999,gid=999 pgdata-vol
+Type=oneshot
+RemainAfterExit=yes
+SyslogIdentifier=%N
+
+---db.service---
+[Unit]
+Description=Postgres
+SourcePath=/tmp/claude-0/cap/q/db.container
+RequiresMountsFor=%t/containers
+Requires=app-network.service
+After=app-network.service
+
+[X-Container]
+Image=docker.io/library/postgres:16
+ContainerName=db
+Volume=pgdata:/var/lib/postgresql/data
+Network=app.network
+PublishPort=127.0.0.1:5432:5432
+HealthCmd=pg_isready
+Environment=POSTGRES_PASSWORD=x \
+  POSTGRES_DB=app
+
+[Service]
+MemoryMax=512M
+Restart=always
+Environment=PODMAN_SYSTEMD_UNIT=%n
+KillMode=mixed
+ExecStop=/usr/bin/podman rm -v -f -i --cidfile=%t/%N.cid
+ExecStopPost=-/usr/bin/podman rm -v -f -i --cidfile=%t/%N.cid
+Delegate=yes
+Type=notify
+NotifyAccess=all
+SyslogIdentifier=%N
+ExecStart=/usr/bin/podman run --name=db --cidfile=%t/%N.cid --replace --rm --cgroups=split --network=systemd-app --sdnotify=conmon -d -v pgdata:/var/lib/postgresql/data --publish 127.0.0.1:5432:5432 --env POSTGRES_DB=app --env POSTGRES_PASSWORD=x --health-cmd pg_isready docker.io/library/postgres:16
+
+[Install]
+WantedBy=default.target
+
