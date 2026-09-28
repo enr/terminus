@@ -72,7 +72,7 @@ The modules, their facts and their checks are described in [docs/modules.md](doc
 ### Other machines
 
 ```shell
-$ terminus remote --sudo srv-01 apps@web-02 -- --only systemd,podman,quadlet
+$ terminus remote --sudo --remote-binary /usr/local/bin/terminus srv-01 apps@web-02 -- --only systemd,podman,quadlet
 $ terminus remote --hosts-file hosts.txt --output-dir reports/
 ```
 

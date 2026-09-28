@@ -154,6 +154,11 @@ func runHost(ctx context.Context, rn runner.Runner, host string, o Options) Resu
 		res.Error = fmt.Sprintf(format, args...)
 		return res
 	}
+	if o.Sudo && o.RemoteBinary == "" {
+		return fail("--sudo requires --remote-binary: a binary copied into the ssh user's own " +
+			"cache directory must never be the one a sudo rule allows to run as root, since that " +
+			"user could replace it")
+	}
 	t, err := parseHost(host)
 	if err != nil {
 		return fail("%v", err)

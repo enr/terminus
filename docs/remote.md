@@ -5,7 +5,7 @@ nothing to install on them beforehand.
 
 ```shell
 $ terminus remote srv-01 apps@web-02 db-01:2222
-$ terminus remote --sudo --hosts-file hosts.txt -- --only systemd,podman,quadlet
+$ terminus remote --sudo --remote-binary /usr/local/bin/terminus --hosts-file hosts.txt -- --only systemd,podman,quadlet
 $ terminus remote --hosts-file hosts.txt --output-dir reports/ -o markdown > all.md
 ```
 
@@ -48,11 +48,21 @@ client with `--ssh`.
 
 Without `--sudo` terminus runs as the ssh user: it sees what that user sees (its own containers and
 user units, not those of other users; no journal of other users). `--sudo` runs it with `sudo -n`
-(non interactive): the ssh user needs a sudo rule without password for it, for example in
-`/etc/sudoers.d/terminus`:
+(non interactive): the ssh user needs a sudo rule without password for it.
+
+`--sudo` requires `--remote-binary`: sudo must never be pointed at a path the ssh user can write,
+such as the `~/.cache/terminus` directory terminus copies itself into, or that user could replace
+the binary sudo runs as root with anything they like. Install terminus at a fixed, root-owned path
+on the hosts and use that:
+
+```shell
+$ terminus remote --sudo --remote-binary /usr/local/bin/terminus --hosts-file hosts.txt
+```
+
+and in `/etc/sudoers.d/terminus`:
 
 ```
-ops ALL=(root) NOPASSWD: /home/ops/.cache/terminus/terminus-*
+ops ALL=(root) NOPASSWD: /usr/local/bin/terminus
 ```
 
 As root, terminus inspects the systemd user managers and the rootless containers of every user
