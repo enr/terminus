@@ -10,8 +10,14 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 )
+
+// waitDelay bounds how long Wait waits after the process group was killed: a grandchild that
+// inherited the stdout/stderr pipes (a backgrounded job, an ssh ControlMaster) would otherwise
+// keep them open forever, and Wait with them.
+const waitDelay = 5 * time.Second
 
 // DefaultTimeout applies to commands that do not set their own timeout.
 const DefaultTimeout = 10 * time.Second
@@ -89,6 +95,22 @@ func (Exec) run(ctx context.Context, c Cmd, stdout io.Writer, fn func([]byte) er
 			return Result{}, err
 		}
 	}
+	// Run in its own process group so that the timeout or a cancellation kills the whole tree
+	// (a shell's background jobs, a pipeline), not just the direct child.
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	cmd.SysProcAttr.Setpgid = true
+	cmd.Cancel = func() error {
+		if cmd.Process == nil {
+			return os.ErrProcessDone
+		}
+		if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil {
+			return cmd.Process.Kill()
+		}
+		return nil
+	}
+	cmd.WaitDelay = waitDelay
 	if len(c.Env) > 0 {
 		if cmd.Env == nil {
 			cmd.Env = os.Environ()

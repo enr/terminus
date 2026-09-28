@@ -47,6 +47,19 @@ func TestExecRunTimeout(t *testing.T) {
 	}
 }
 
+func TestExecRunKillsProcessGroup(t *testing.T) {
+	// A backgrounded grandchild must die with the timeout, not keep the pipes open until it
+	// finishes on its own.
+	start := time.Now()
+	_, err := Exec{}.Run(context.Background(), Cmd{Name: "sh", Args: []string{"-c", "sleep 30 & wait"}, Timeout: 200 * time.Millisecond})
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want deadline exceeded", err)
+	}
+	if elapsed := time.Since(start); elapsed > 3*time.Second {
+		t.Fatalf("took %s: the backgrounded child was not killed", elapsed)
+	}
+}
+
 func TestExecRunErrors(t *testing.T) {
 	if _, err := (Exec{}).Run(context.Background(), Cmd{Name: "terminus-no-such-command"}); err == nil {
 		t.Fatal("expected error for missing command")
