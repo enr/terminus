@@ -105,6 +105,11 @@ func New() *Module {
 // Name implements module.Module.
 func (*Module) Name() string { return Name }
 
+// Description implements module.Module.
+func (*Module) Description() string {
+	return "host name, kernel, OS release, uptime, time zone, hardware, virtualization"
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
 

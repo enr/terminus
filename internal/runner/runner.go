@@ -14,12 +14,15 @@ import (
 // DefaultTimeout applies to commands that do not set their own timeout.
 const DefaultTimeout = 10 * time.Second
 
+// NoTimeout makes a command bounded only by its context.
+const NoTimeout time.Duration = -1
+
 // Cmd describes a command to run.
 type Cmd struct {
 	Name    string
 	Args    []string
-	Env     []string // added to the current environment
-	Timeout time.Duration
+	Env     []string      // added to the current environment
+	Timeout time.Duration // 0: DefaultTimeout; NoTimeout: only the context
 	// User to run the command as. Not implemented yet: a non-empty value makes Run fail.
 	User string
 }
@@ -48,12 +51,17 @@ func (Exec) Run(ctx context.Context, c Cmd) (Result, error) {
 	if c.User != "" {
 		return Result{}, ErrUserNotSupported
 	}
-	timeout := c.Timeout
-	if timeout <= 0 {
-		timeout = DefaultTimeout
+	switch timeout := c.Timeout; {
+	case timeout == NoTimeout:
+	case timeout <= 0:
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, DefaultTimeout)
+		defer cancel()
+	default:
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
 
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	if len(c.Env) > 0 {

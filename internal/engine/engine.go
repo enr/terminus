@@ -61,11 +61,17 @@ func Run(ctx context.Context, mods []module.Module, env *module.Env, opts Option
 					if err != nil {
 						o.result.Errors = append(o.result.Errors, err.Error())
 					}
-					for i := range fs {
-						fs[i].Module = m.Name()
+					for _, f := range fs {
+						if env != nil && env.Checks.IsDisabled(f.ID) {
+							continue
+						}
+						f.Module = m.Name()
+						o.findings = append(o.findings, f)
 					}
-					o.findings = fs
 				}
+			}
+			if c, ok := o.result.Facts.(module.Carrier); ok {
+				o.result.Facts = c.ReportFacts()
 			}
 			outcomes[i] = o
 		}()

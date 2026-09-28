@@ -61,7 +61,7 @@ func newHandler(a *app, log *slog.Logger) http.Handler {
 			httpError(w, log, http.StatusBadRequest, err)
 			return
 		}
-		r, err := a.collect(req.Context(), nil, false)
+		r, err := a.collect(req.Context(), false)
 		if err != nil {
 			httpError(w, log, http.StatusInternalServerError, err)
 			return
@@ -85,7 +85,7 @@ func newHandler(a *app, log *slog.Logger) http.Handler {
 		io.WriteString(w, s)
 	})
 	mux.HandleFunc("GET /report", func(w http.ResponseWriter, req *http.Request) {
-		r, err := a.collect(req.Context(), nil, true)
+		r, err := a.collect(req.Context(), true)
 		if err != nil {
 			httpError(w, log, http.StatusInternalServerError, err)
 			return

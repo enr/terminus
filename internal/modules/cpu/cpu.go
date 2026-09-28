@@ -16,16 +16,12 @@ import (
 // Name of the module.
 const Name = "cpu"
 
-// Thresholds on the 15 minutes load average per logical CPU.
-const (
-	loadWarn = 1.0
-	loadFail = 2.0
-)
-
-// Thresholds on the share of time (percent, 5 minutes average) some task waited for a CPU.
-const (
-	pressureWarn = 20.0
-	pressureFail = 50.0
+// Default thresholds.
+var (
+	// loadThreshold is on the 15 minutes load average per logical CPU.
+	loadThreshold = module.Threshold{Warn: 1, Fail: 2, Unit: "load per cpu"}
+	// pressureThreshold is on the share of time some task waited for a CPU (5 minutes average).
+	pressureThreshold = module.Threshold{Warn: 20, Fail: 50, Unit: "percent"}
 )
 
 // Facts about the processors.
@@ -64,8 +60,19 @@ func New() *Module { return &Module{fs: hostfs.Host} }
 // Name implements module.Module.
 func (*Module) Name() string { return Name }
 
+// Description implements module.Module.
+func (*Module) Description() string { return "processors, load average, CPU pressure" }
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
+
+// Checks implements module.Checker.
+func (*Module) Checks() []module.CheckInfo {
+	return []module.CheckInfo{
+		{ID: "cpu.load", Description: "15 minutes load average per logical CPU", Threshold: &loadThreshold},
+		{ID: "cpu.pressure", Description: "share of time tasks waited for a CPU (PSI some, 5 min)", Threshold: &pressureThreshold},
+	}
+}
 
 // Collect implements module.Module.
 func (m *Module) Collect(_ context.Context, _ *module.Env) (any, error) {
@@ -156,7 +163,7 @@ func parseLoadAvg(s string) (Load, error) {
 }
 
 // Check implements module.Checker.
-func (*Module) Check(_ *module.Env, facts any) []model.Finding {
+func (*Module) Check(env *module.Env, facts any) []model.Finding {
 	f, ok := facts.(*Facts)
 	if !ok {
 		return nil
@@ -171,7 +178,7 @@ func (*Module) Check(_ *module.Env, facts any) []model.Finding {
 				"logical_cpus":   f.Logical,
 				"load15_per_cpu": f.Load.Avg15PerCPU,
 			},
-			Severity: model.Grade(f.Load.Avg15PerCPU, loadWarn, loadFail),
+			Severity: env.Threshold("cpu.load", loadThreshold).Grade(f.Load.Avg15PerCPU),
 		}
 		load.Message = fmt.Sprintf("15 min load %.2f on %d CPUs (%.2f per CPU)", f.Load.Avg15, f.Logical, f.Load.Avg15PerCPU)
 		if load.Severity >= model.SeverityWarn {
@@ -184,7 +191,7 @@ func (*Module) Check(_ *module.Env, facts any) []model.Finding {
 		fnd := model.Finding{
 			ID:       "cpu.pressure",
 			Subject:  "cpu",
-			Severity: model.Grade(p, pressureWarn, pressureFail),
+			Severity: env.Threshold("cpu.pressure", pressureThreshold).Grade(p),
 			Message:  fmt.Sprintf("tasks waited for a CPU %.1f%% of the time (5 min)", p),
 			Evidence: map[string]any{"psi_some_avg300": p, "psi_some_avg60": f.PSI.Some.Avg60},
 		}

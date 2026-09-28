@@ -16,8 +16,9 @@ type fakeModule struct {
 	collect func(ctx context.Context) (any, error)
 }
 
-func (m *fakeModule) Name() string { return m.name }
-func (m *fakeModule) Core() bool   { return m.core }
+func (m *fakeModule) Name() string        { return m.name }
+func (m *fakeModule) Description() string { return "fake" }
+func (m *fakeModule) Core() bool          { return m.core }
 func (m *fakeModule) Collect(ctx context.Context, _ *module.Env) (any, error) {
 	return m.collect(ctx)
 }
@@ -28,6 +29,7 @@ type checkingModule struct {
 }
 
 func (m *checkingModule) Check(_ *module.Env, facts any) []model.Finding { return m.check(facts) }
+func (m *checkingModule) Checks() []module.CheckInfo                     { return nil }
 
 func TestRunStatuses(t *testing.T) {
 	mods := []module.Module{
@@ -114,35 +116,32 @@ func TestRunChecks(t *testing.T) {
 	}
 }
 
-func TestRegistrySelect(t *testing.T) {
-	mk := func(n string, core bool) module.Module {
-		return &fakeModule{name: n, core: core, collect: func(context.Context) (any, error) { return nil, nil }}
-	}
-	reg, err := module.NewRegistry(mk("system", true), mk("podman", false), mk("external", true))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := module.NewRegistry(mk("a", true), mk("a", false)); err == nil {
-		t.Fatal("duplicate module accepted")
-	}
+type carrier struct{ facts any }
 
-	mods, _ := reg.Select(nil)
-	if len(mods) != 2 || mods[0].Name() != "external" || mods[1].Name() != "system" {
-		t.Fatalf("core selection = %v", names(mods))
-	}
-	mods, err = reg.Select([]string{"podman", "system", "podman"})
-	if err != nil || len(mods) != 2 || mods[0].Name() != "podman" {
-		t.Fatalf("explicit selection = %v %v", names(mods), err)
-	}
-	if _, err := reg.Select([]string{"nope"}); err == nil {
-		t.Fatal("unknown module accepted")
-	}
-}
+func (c carrier) ReportFacts() any { return c.facts }
 
-func names(mods []module.Module) []string {
-	var n []string
-	for _, m := range mods {
-		n = append(n, m.Name())
+func TestRunDisabledChecksAndCarrier(t *testing.T) {
+	m := &checkingModule{
+		fakeModule: fakeModule{name: "ext", collect: func(context.Context) (any, error) {
+			return carrier{facts: "shown"}, nil
+		}},
+		check: func(facts any) []model.Finding {
+			if _, ok := facts.(carrier); !ok {
+				t.Errorf("checker did not get the carrier: %T", facts)
+			}
+			return []model.Finding{
+				{ID: "ext.a", Severity: model.SeverityFail},
+				{ID: "ext.b", Severity: model.SeverityWarn},
+				{ID: "other.c", Severity: model.SeverityWarn},
+			}
+		},
 	}
-	return n
+	env := &module.Env{Checks: &module.CheckSettings{Disabled: []string{"ext.*"}}}
+	r := Run(context.Background(), []module.Module{m}, env, Options{Checks: true})
+	if len(r.Findings) != 1 || r.Findings[0].ID != "other.c" {
+		t.Fatalf("findings: %+v", r.Findings)
+	}
+	if r.Modules["ext"].Facts != "shown" {
+		t.Fatalf("facts: %#v", r.Modules["ext"].Facts)
+	}
 }

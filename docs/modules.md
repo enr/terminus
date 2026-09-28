@@ -1,15 +1,17 @@
 # Modules
 
-Facts and checks are grouped in modules. The core modules below run by default; `--only`
-selects some of them (`terminus check --only memory,storage`).
+Facts and checks are grouped in modules. Core modules run by default, optional modules must be
+enabled in the [configuration](configuration.md), external modules are executables added to
+`/etc/terminus/modules.d`. `terminus modules list` shows them all.
 
 In JSON the facts of a module are under `.modules.<module>.facts`. Path queries start from the
 module name (`terminus memory.available_bytes`); in lists a name selects the element
 (`network.interfaces.eth0`, `storage.filesystems./srv`). Sizes are in bytes (`_bytes`), ratios
 between 0 and 1 (`_ratio`), durations in seconds (`_seconds`); the text output makes them readable.
 
-Findings have a severity: `ok`, `info`, `warn`, `fail`. Thresholds are fixed for now; they will
-become configurable in `terminus.toml` (see [design-v2.md](design-v2.md)).
+Findings have a severity: `ok`, `info`, `warn`, `fail`. The thresholds below are the defaults;
+they can be changed in [`terminus.toml`](configuration.md#thresholds) and checks can be disabled.
+`terminus checks list` shows the effective ones.
 
 ## system
 
@@ -73,5 +75,28 @@ LISTEN, bound UDP) with the owning process. Processes of other users are visible
 
 ## external
 
-[Custom facts](custom-facts.md) from `/etc/terminus/facts.d`. Skipped when the directory does
-not exist.
+[Custom facts](custom-facts.md) from `/etc/terminus/facts.d` (`dir` in `[modules.external]`).
+Skipped when the directory does not exist.
+
+# Optional modules
+
+## http
+
+Probes the endpoints listed in the configuration: status code, time to the response headers and
+the TLS certificate served. Redirects are reported, not followed.
+
+```toml
+[modules.http]
+enabled = true
+timeout = "10s"
+
+[[modules.http.endpoints]]
+url = "https://example.org/"
+status = 200   # optional: expected status, default any 2xx or 3xx
+```
+
+| Check | Rule |
+|---|---|
+| `http.status` | fail on errors, unexpected status, or 4xx/5xx without an expected status |
+| `http.latency` | seconds to the response headers: warn ≥ 2, fail ≥ 5 |
+| `http.tls-expiry` | days before the certificate expires: warn < 14, fail < 7 |

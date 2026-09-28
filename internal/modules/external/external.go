@@ -34,8 +34,34 @@ type Module struct {
 // New returns the external facts module reading from dir.
 func New(dir string) *Module { return &Module{dir: dir} }
 
+// Configure implements module.Configurable:
+//
+//	[modules.external]
+//	dir = "/etc/terminus/facts.d"
+func (m *Module) Configure(decode module.Decoder) error {
+	var c struct {
+		Dir string `toml:"dir"`
+	}
+	if err := decode(&c); err != nil {
+		return err
+	}
+	if c.Dir != "" {
+		m.dir = c.Dir
+	}
+	return nil
+}
+
+// ConfigExample implements module.Configurable.
+func (*Module) ConfigExample() string { return `dir = "` + DefaultDir + `"` }
+
+// SetDir changes the directory (the --external-facts-dir flag wins over the configuration).
+func (m *Module) SetDir(dir string) { m.dir = dir }
+
 // Name implements module.Module.
 func (*Module) Name() string { return Name }
+
+// Description implements module.Module.
+func (*Module) Description() string { return "custom facts from executables and JSON files" }
 
 // Core implements module.Module.
 func (*Module) Core() bool { return true }

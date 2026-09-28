@@ -16,17 +16,14 @@ import (
 // Name of the module.
 const Name = "memory"
 
-// Check thresholds.
-const (
-	// availableWarn/Fail: MemAvailable as a fraction of MemTotal (lower is worse).
-	availableWarn = 0.10
-	availableFail = 0.05
-	// swapWarn/Fail: used swap as a fraction of the swap space.
-	swapWarn = 0.50
-	swapFail = 0.80
-	// pressureWarn/Fail: percent of time all tasks were stalled on memory (5 min average).
-	pressureWarn = 5.0
-	pressureFail = 20.0
+// Default thresholds.
+var (
+	// availableThreshold is on MemAvailable as a fraction of MemTotal.
+	availableThreshold = module.Threshold{Warn: 0.10, Fail: 0.05, Below: true, Unit: "ratio"}
+	// swapThreshold is on used swap as a fraction of the swap space.
+	swapThreshold = module.Threshold{Warn: 0.50, Fail: 0.80, Unit: "ratio"}
+	// pressureThreshold is on the share of time all tasks stalled on memory (5 minutes average).
+	pressureThreshold = module.Threshold{Warn: 5, Fail: 20, Unit: "percent"}
 )
 
 // Facts about memory. Sizes are in bytes.
@@ -61,8 +58,21 @@ func New() *Module { return &Module{fs: hostfs.Host} }
 // Name implements module.Module.
 func (*Module) Name() string { return Name }
 
+// Description implements module.Module.
+func (*Module) Description() string { return "RAM, swap, OOM kills, memory pressure" }
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
+
+// Checks implements module.Checker.
+func (*Module) Checks() []module.CheckInfo {
+	return []module.CheckInfo{
+		{ID: "mem.available", Description: "available memory (MemAvailable) over total", Threshold: &availableThreshold},
+		{ID: "mem.swap-used", Description: "used swap over swap space", Threshold: &swapThreshold},
+		{ID: "mem.oom-kills", Description: "processes killed by the OOM killer since boot, cgroup limits included"},
+		{ID: "mem.pressure", Description: "share of time all tasks stalled on memory (PSI full, 5 min)", Threshold: &pressureThreshold},
+	}
+}
 
 // Collect implements module.Module.
 func (m *Module) Collect(_ context.Context, _ *module.Env) (any, error) {
@@ -144,7 +154,7 @@ func vmstatValue(lines []string, key string) *uint64 {
 }
 
 // Check implements module.Checker.
-func (*Module) Check(_ *module.Env, facts any) []model.Finding {
+func (*Module) Check(env *module.Env, facts any) []model.Finding {
 	f, ok := facts.(*Facts)
 	if !ok || f.TotalBytes == 0 {
 		return nil
@@ -154,7 +164,7 @@ func (*Module) Check(_ *module.Env, facts any) []model.Finding {
 	avail := model.Finding{
 		ID:       "mem.available",
 		Subject:  "memory",
-		Severity: model.GradeBelow(f.AvailableRatio, availableWarn, availableFail),
+		Severity: env.Threshold("mem.available", availableThreshold).Grade(f.AvailableRatio),
 		Message:  fmt.Sprintf("%.1f%% of memory available", f.AvailableRatio*100),
 		Evidence: map[string]any{
 			"available_bytes": f.AvailableBytes,
@@ -171,7 +181,7 @@ func (*Module) Check(_ *module.Env, facts any) []model.Finding {
 		swap := model.Finding{
 			ID:       "mem.swap-used",
 			Subject:  "swap",
-			Severity: model.Grade(f.SwapUsedRatio, swapWarn, swapFail),
+			Severity: env.Threshold("mem.swap-used", swapThreshold).Grade(f.SwapUsedRatio),
 			Message:  fmt.Sprintf("%.1f%% of swap used", f.SwapUsedRatio*100),
 			Evidence: map[string]any{
 				"swap_used_bytes":  f.SwapTotalBytes - f.SwapFreeBytes,
@@ -205,7 +215,7 @@ func (*Module) Check(_ *module.Env, facts any) []model.Finding {
 		pr := model.Finding{
 			ID:       "mem.pressure",
 			Subject:  "memory",
-			Severity: model.Grade(p, pressureWarn, pressureFail),
+			Severity: env.Threshold("mem.pressure", pressureThreshold).Grade(p),
 			Message:  fmt.Sprintf("all tasks stalled on memory %.1f%% of the time (5 min)", p),
 			Evidence: map[string]any{"psi_full_avg300": p, "psi_full_avg60": f.PSI.Full.Avg60},
 		}

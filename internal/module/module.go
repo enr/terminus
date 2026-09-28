@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sort"
 
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/runner"
@@ -19,13 +18,26 @@ type Env struct {
 	Runner runner.Runner
 	Debug  bool
 	Log    *slog.Logger
+	// Checks holds the check settings of the configuration; nil means defaults.
+	Checks *CheckSettings
+}
+
+// Threshold returns the threshold of a check: the configured one or def.
+// It is safe on a nil Env.
+func (e *Env) Threshold(id string, def Threshold) Threshold {
+	if e == nil {
+		return def
+	}
+	return e.Checks.Threshold(id, def)
 }
 
 // Module collects the facts of a domain.
 type Module interface {
 	// Name is the unique, lowercase module name: it is the key of the module in reports and queries.
 	Name() string
-	// Core modules are always enabled; the others must be enabled explicitly.
+	// Description says in one line what the module covers.
+	Description() string
+	// Core modules are enabled by default; the others must be enabled in the configuration.
 	Core() bool
 	// Collect returns the facts. A non-nil error together with non-nil facts means a partial
 	// collection: the facts are kept and the error is reported.
@@ -34,75 +46,48 @@ type Module interface {
 
 // Checker is implemented by modules that evaluate their own facts.
 type Checker interface {
+	// Checks describes the checks of the module, with their default thresholds.
+	Checks() []CheckInfo
 	// Check receives the facts returned by Collect.
 	Check(env *Env, facts any) []model.Finding
 }
 
-// Registry holds the known modules.
-type Registry struct {
-	modules map[string]Module
+// Carrier is implemented by values that Collect returns to pass more than the facts to Check:
+// the report shows ReportFacts(), Check receives the carrier itself.
+type Carrier interface {
+	ReportFacts() any
 }
 
-// NewRegistry returns a registry with the given modules.
-func NewRegistry(mods ...Module) (*Registry, error) {
-	r := &Registry{modules: map[string]Module{}}
-	for _, m := range mods {
-		if err := r.Register(m); err != nil {
-			return nil, err
-		}
-	}
-	return r, nil
+// Decoder decodes the configuration section of a module into v (a pointer to a struct).
+// Keys that v does not know are reported as errors by the configuration loader.
+type Decoder func(v any) error
+
+// Configurable is implemented by modules that read settings from their [modules.<name>] section.
+type Configurable interface {
+	Configure(decode Decoder) error
+	// ConfigExample returns the module settings at their defaults, as the body of the section
+	// (without the header and the enabled key); nested tables are allowed.
+	ConfigExample() string
 }
 
-// Register adds a module; names must be unique.
-func (r *Registry) Register(m Module) error {
-	if _, ok := r.modules[m.Name()]; ok {
-		return fmt.Errorf("module %q already registered", m.Name())
-	}
-	r.modules[m.Name()] = m
-	return nil
+// Detection is the outcome of Detector.Detect.
+type Detection struct {
+	// Found tells whether the machine runs what the module covers.
+	Found bool
+	// Reason explains the outcome (binary found, socket missing, ...).
+	Reason string
+	// Config is a suggested [modules.<name>] body for terminus.toml (without the header).
+	Config string
 }
 
-// Get returns the module with the given name.
-func (r *Registry) Get(name string) (Module, bool) {
-	m, ok := r.modules[name]
-	return m, ok
+// Detector is implemented by optional modules that can tell whether they are useful here.
+type Detector interface {
+	Detect(ctx context.Context, env *Env) Detection
 }
 
-// All returns the modules sorted by name.
-func (r *Registry) All() []Module {
-	mods := make([]Module, 0, len(r.modules))
-	for _, m := range r.modules {
-		mods = append(mods, m)
-	}
-	sort.Slice(mods, func(i, j int) bool { return mods[i].Name() < mods[j].Name() })
-	return mods
-}
-
-// Select returns the named modules, or the core ones when no name is given.
-func (r *Registry) Select(names []string) ([]Module, error) {
-	if len(names) == 0 {
-		var core []Module
-		for _, m := range r.All() {
-			if m.Core() {
-				core = append(core, m)
-			}
-		}
-		return core, nil
-	}
-	seen := map[string]bool{}
-	var mods []Module
-	for _, n := range names {
-		m, ok := r.modules[n]
-		if !ok {
-			return nil, fmt.Errorf("unknown module %q", n)
-		}
-		if !seen[n] {
-			seen[n] = true
-			mods = append(mods, m)
-		}
-	}
-	return mods, nil
+// External is implemented by the modules loaded from the external modules directory.
+type External interface {
+	External() bool
 }
 
 // SkipError is returned by modules that cannot run on this machine (missing binary, socket, ...).

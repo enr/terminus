@@ -17,14 +17,21 @@ $ sudo install terminus-*_linux_amd64/terminus /usr/local/bin/
 ## Usage
 
 ```
-terminus facts [path]   print the facts (all of them, or the value at path)
-terminus check          evaluate the facts
-terminus serve          serve facts and reports over HTTP
+terminus facts [path]     print the facts (all of them, or the value at path)
+terminus check            evaluate the facts
+terminus serve            serve facts and reports over HTTP
+terminus modules list     which modules run and why
+terminus modules detect   which optional modules fit this machine
+terminus checks list      checks with their effective thresholds
+terminus config example   a commented terminus.toml with every setting
+terminus config validate  check the configuration
 terminus version
 ```
 
-Facts and checks are grouped in modules: `system`, `cpu`, `memory`, `storage`, `network` and
-`external` (custom facts). By default the core modules run; `--only memory,storage` selects some.
+Facts and checks are grouped in modules: the core ones (`system`, `cpu`, `memory`, `storage`,
+`network`, `external` for custom facts) run by default, optional ones (`http`) are enabled in
+[`/etc/terminus/terminus.toml`](docs/configuration.md), and [external modules](docs/configuration.md#external-modules)
+are executables dropped in `/etc/terminus/modules.d`. `--only memory,storage` runs just some.
 Terminus also supports [custom facts](docs/custom-facts.md) and a [HTTP API](docs/api.md).
 
 ### Check the machine

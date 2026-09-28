@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"regexp"
 	"strings"
@@ -15,18 +14,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/enr/terminus/internal/buildinfo"
+	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/engine"
 	"github.com/enr/terminus/internal/model"
-	"github.com/enr/terminus/internal/module"
-	"github.com/enr/terminus/internal/modules/cpu"
 	"github.com/enr/terminus/internal/modules/external"
-	"github.com/enr/terminus/internal/modules/memory"
-	"github.com/enr/terminus/internal/modules/network"
-	"github.com/enr/terminus/internal/modules/storage"
 	"github.com/enr/terminus/internal/modules/system"
 	"github.com/enr/terminus/internal/output"
 	"github.com/enr/terminus/internal/query"
-	"github.com/enr/terminus/internal/runner"
 )
 
 // globalOptions are the flags shared by every command.
@@ -34,7 +28,14 @@ type globalOptions struct {
 	debug            bool
 	timeout          time.Duration
 	color            string
+	configPath       string
 	externalFactsDir string
+	modulesDir       string
+	only             []string
+	enable           []string
+	disable          []string
+	// changed tells whether a flag was set on the command line (flags win over the configuration).
+	changed func(name string) bool
 }
 
 // exitError carries a specific exit code up to run.
@@ -90,7 +91,11 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 		},
 	}
 	root.SetVersionTemplate("terminus {{.Version}}\n")
-	root.PersistentPreRunE = func(*cobra.Command, []string) error {
+	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+		g.changed = func(name string) bool {
+			f := cmd.Flags().Lookup(name)
+			return f != nil && f.Changed
+		}
 		switch output.ColorMode(g.color) {
 		case output.ColorAuto, output.ColorAlways, output.ColorNever:
 			return nil
@@ -102,7 +107,12 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 	pf.BoolVar(&g.debug, "debug", false, "log collection errors and diagnostics to stderr")
 	pf.DurationVar(&g.timeout, "timeout", engine.DefaultTimeout, "maximum time for each module")
 	pf.StringVar(&g.color, "color", string(output.ColorAuto), "use colors: auto, always, never")
+	pf.StringVar(&g.configPath, "config", config.DefaultPath, "configuration file (optional unless given)")
 	pf.StringVar(&g.externalFactsDir, "external-facts-dir", external.DefaultDir, "path to the external facts directory")
+	pf.StringVar(&g.modulesDir, "modules-dir", config.DefaultModulesDir, "path to the external modules directory")
+	pf.StringSliceVar(&g.only, "only", nil, "run only these modules")
+	pf.StringSliceVar(&g.enable, "modules", nil, "enable these modules too")
+	pf.StringSliceVar(&g.disable, "no-modules", nil, "disable these modules")
 
 	// Defined here to keep -v free: subcommands use it for --verbose.
 	root.Flags().Bool("version", false, "print the version")
@@ -111,6 +121,9 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 		newFactsCmd(g, stdout, stderr),
 		newCheckCmd(g, stdout),
 		newServeCmd(g, stderr),
+		newModulesCmd(g, stdout, stderr),
+		newChecksCmd(g, stdout, stderr),
+		newConfigCmd(g, stdout, stderr),
 		newVersionCmd(stdout),
 	)
 	return root
@@ -165,50 +178,6 @@ func newVersionCmd(stdout io.Writer) *cobra.Command {
 	}
 }
 
-// app holds what the commands share once the flags are parsed.
-type app struct {
-	g   *globalOptions
-	reg *module.Registry
-	env *module.Env
-}
-
-// newApp prepares the module registry and the environment.
-func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
-	level := slog.LevelWarn
-	if g.debug {
-		level = slog.LevelDebug
-	}
-	env := &module.Env{
-		Runner: runner.Exec{},
-		Debug:  g.debug,
-		Log:    slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: level})),
-	}
-	reg, err := module.NewRegistry(
-		system.New(),
-		cpu.New(),
-		memory.New(),
-		storage.New(),
-		network.New(),
-		external.New(g.externalFactsDir),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &app{g: g, reg: reg, env: env}, nil
-}
-
-// collect runs the selected modules (the core ones when only is empty).
-func (a *app) collect(ctx context.Context, only []string, checks bool) (*model.Report, error) {
-	mods, err := a.reg.Select(only)
-	if err != nil {
-		return nil, err
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return engine.Run(ctx, mods, a.env, engine.Options{Timeout: a.g.timeout, Checks: checks}), nil
-}
-
 func renderOptions(g *globalOptions, stdout io.Writer) (output.Options, error) {
 	o := output.Options{}
 	f, ok := stdout.(*os.File)
@@ -225,7 +194,6 @@ func renderOptions(g *globalOptions, stdout io.Writer) (output.Options, error) {
 type factsOptions struct {
 	output     string
 	verbose    bool
-	only       []string
 	format     string
 	formatFile string
 }
@@ -234,7 +202,6 @@ func addFactsFlags(cmd *cobra.Command, fo *factsOptions) {
 	f := cmd.Flags()
 	f.StringVarP(&fo.output, "output", "o", "text", "output format: text, json")
 	f.BoolVarP(&fo.verbose, "verbose", "v", false, "show long lists and tables in full (text output)")
-	f.StringSliceVar(&fo.only, "only", nil, "run only these modules (default: core modules)")
 	f.StringVar(&fo.format, "format", "", "format the facts with the given Go template")
 	f.StringVar(&fo.formatFile, "format-file", "", "format the facts with the Go template in the given file")
 }
@@ -269,7 +236,7 @@ func runFacts(ctx context.Context, g *globalOptions, fo *factsOptions, args []st
 	if err != nil {
 		return err
 	}
-	r, err := a.collect(ctx, fo.only, false)
+	r, err := a.collect(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -337,7 +304,6 @@ func executeTemplate(fo *factsOptions, r *model.Report, stdout io.Writer) error 
 
 type checkOptions struct {
 	output   string
-	only     []string
 	verbose  bool
 	problems bool
 }
@@ -363,7 +329,7 @@ Exit code: 0 all good, 1 warnings, 2 failures, 3 terminus error.`,
 			if err != nil {
 				return err
 			}
-			r, err := a.collect(cmd.Context(), co.only, true)
+			r, err := a.collect(cmd.Context(), true)
 			if err != nil {
 				return err
 			}
@@ -383,7 +349,6 @@ Exit code: 0 all good, 1 warnings, 2 failures, 3 terminus error.`,
 	}
 	f := cmd.Flags()
 	f.StringVarP(&co.output, "output", "o", "text", "output format: text, json")
-	f.StringSliceVar(&co.only, "only", nil, "run only these modules (default: core modules)")
 	f.BoolVarP(&co.verbose, "verbose", "v", false, "show evidence and hints of the findings")
 	f.BoolVar(&co.problems, "problems", false, "show only warn and fail findings")
 	return cmd

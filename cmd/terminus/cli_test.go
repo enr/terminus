@@ -15,11 +15,23 @@ import (
 	"github.com/enr/terminus/internal/model"
 )
 
+// runCLI runs terminus isolated from the machine configuration: an empty configuration file and
+// no external modules, unless the arguments set them.
 func runCLI(t *testing.T, args ...string) (int, string, string) {
 	t.Helper()
+	base := []string{"--config", writeConfig(t, ""), "--modules-dir", filepath.Join(t.TempDir(), "none")}
 	var stdout, stderr bytes.Buffer
-	code := run(args, &stdout, &stderr)
+	code := run(append(base, args...), &stdout, &stderr)
 	return code, stdout.String(), stderr.String()
+}
+
+func writeConfig(t *testing.T, content string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "terminus.toml")
+	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
 }
 
 // externalDir creates an external facts directory with a static fact.
@@ -137,7 +149,8 @@ func TestVersion(t *testing.T) {
 }
 
 func TestServeHandler(t *testing.T) {
-	g := &globalOptions{externalFactsDir: externalDir(t), color: "never"}
+	g := &globalOptions{externalFactsDir: externalDir(t), color: "never", configPath: writeConfig(t, ""),
+		changed: func(n string) bool { return n == "config" || n == "external-facts-dir" }}
 	var logs bytes.Buffer
 	a, err := newApp(g, &logs)
 	if err != nil {

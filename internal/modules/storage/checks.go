@@ -7,19 +7,27 @@ import (
 	"github.com/enr/terminus/internal/module"
 )
 
-// Thresholds on used space and used inodes, as fractions.
-const (
-	usageWarn  = 0.85
-	usageFail  = 0.95
-	inodesWarn = 0.85
-	inodesFail = 0.95
+// Default thresholds on used space and used inodes.
+var (
+	usageThreshold  = module.Threshold{Warn: 0.85, Fail: 0.95, Unit: "ratio"}
+	inodesThreshold = module.Threshold{Warn: 0.85, Fail: 0.95, Unit: "ratio"}
 )
+
+// Checks implements module.Checker.
+func (*Module) Checks() []module.CheckInfo {
+	return []module.CheckInfo{
+		{ID: "disk.usage", Description: "used space of each filesystem (as df)", Threshold: &usageThreshold},
+		{ID: "disk.inodes", Description: "used inodes of each filesystem", Threshold: &inodesThreshold},
+		{ID: "disk.readonly", Description: "filesystem read-only while /etc/fstab mounts it read-write"},
+		{ID: "disk.unreachable", Description: "filesystem whose usage cannot be read (statfs error or timeout)"},
+	}
+}
 
 // volatileFS are the memory-backed filesystems.
 var volatileFS = map[string]bool{"tmpfs": true, "devtmpfs": true}
 
 // Check implements module.Checker.
-func (*Module) Check(_ *module.Env, facts any) []model.Finding {
+func (*Module) Check(env *module.Env, facts any) []model.Finding {
 	f, ok := facts.(*Facts)
 	if !ok {
 		return nil
@@ -49,24 +57,24 @@ func (*Module) Check(_ *module.Env, facts any) []model.Finding {
 		seen[fs.DeviceID] = true
 		// Memory-backed filesystems (/run, /dev/shm) are reported only when they fill up.
 		volatile := volatileFS[fs.FSType]
-		if u := usageFinding(fs); !volatile || u.Severity >= model.SeverityWarn {
+		if u := usageFinding(fs, env.Threshold("disk.usage", usageThreshold)); !volatile || u.Severity >= model.SeverityWarn {
 			out = append(out, u)
 		}
 		if fs.InodesTotal == 0 {
 			continue
 		}
-		if in := inodesFinding(fs); !volatile || in.Severity >= model.SeverityWarn {
+		if in := inodesFinding(fs, env.Threshold("disk.inodes", inodesThreshold)); !volatile || in.Severity >= model.SeverityWarn {
 			out = append(out, in)
 		}
 	}
 	return out
 }
 
-func usageFinding(fs Filesystem) model.Finding {
+func usageFinding(fs Filesystem, t module.Threshold) model.Finding {
 	f := model.Finding{
 		ID:       "disk.usage",
 		Subject:  fs.MountPoint,
-		Severity: model.Grade(fs.UsedRatio, usageWarn, usageFail),
+		Severity: t.Grade(fs.UsedRatio),
 		Message:  fmt.Sprintf("%.0f%% used", fs.UsedRatio*100),
 		Evidence: map[string]any{
 			"used_bytes":      fs.UsedBytes,
@@ -81,11 +89,11 @@ func usageFinding(fs Filesystem) model.Finding {
 	return f
 }
 
-func inodesFinding(fs Filesystem) model.Finding {
+func inodesFinding(fs Filesystem, t module.Threshold) model.Finding {
 	f := model.Finding{
 		ID:       "disk.inodes",
 		Subject:  fs.MountPoint,
-		Severity: model.Grade(fs.InodesUsedRatio, inodesWarn, inodesFail),
+		Severity: t.Grade(fs.InodesUsedRatio),
 		Message:  fmt.Sprintf("%.0f%% of inodes used", fs.InodesUsedRatio*100),
 		Evidence: map[string]any{"inodes_used": fs.InodesUsed, "inodes_total": fs.InodesTotal},
 	}

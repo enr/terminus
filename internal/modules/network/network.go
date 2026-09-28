@@ -95,6 +95,11 @@ func New() *Module {
 // Name implements module.Module.
 func (*Module) Name() string { return Name }
 
+// Description implements module.Module.
+func (*Module) Description() string {
+	return "interfaces, default routes, DNS, listening sockets"
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
 

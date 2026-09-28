@@ -8,6 +8,15 @@ import (
 	"github.com/enr/terminus/internal/module"
 )
 
+// Checks implements module.Checker.
+func (*Module) Checks() []module.CheckInfo {
+	return []module.CheckInfo{
+		{ID: "net.default-route", Description: "a default route exists"},
+		{ID: "net.dns", Description: "DNS servers are configured"},
+		{ID: "net.public-listeners", Description: "TCP ports listening on all addresses (info)"},
+	}
+}
+
 // Check implements module.Checker.
 func (*Module) Check(_ *module.Env, facts any) []model.Finding {
 	f, ok := facts.(*Facts)
