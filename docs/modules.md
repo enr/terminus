@@ -372,3 +372,32 @@ timers = ["*.timer"]    # glob patterns
 | `timers.never-run` | info: never fired although active for more than a day and for longer than the wait to its next run |
 | `timers.no-next` | info: active calendar timer that will not fire again (a date in the past) |
 | `timers.scope` | a user manager not inspected, or not readable |
+
+## firewall
+
+The packet filter as the kernel applies it: `nft -j list ruleset` (which also holds the rules of
+firewalld, of ufw and of iptables-nft) and the iptables-legacy filter tables, which nft does not
+show; the state of firewalld and ufw when installed. Reading the rules requires root.
+
+The input chains are evaluated for a new connection from anywhere to each port listening on all
+addresses (as in the `network` module), following jumps, gotos and verdict maps. Rules for
+established connections and loopback are left out; rules with conditions that hold only for some
+clients (source addresses, named sets, matches not understood) make a port **restricted**
+instead of **open**; dropped or rejected ports are **filtered**. Base chains are all traversed, so
+a drop in any of them (nftables tables, legacy tables) wins. IPv4 and IPv6 are evaluated apart:
+`ip`/`inet` tables and `iptables` for the first, `ip6`/`inet` tables and `ip6tables` for the second.
+
+Ports held by `conmon` or `docker-proxy` belong to rootful containers: their traffic is
+DNAT-ed in prerouting and goes through the forward chain, not the input chain, so they are
+reported as reachable whatever the input chain says (the classic "docker bypasses ufw").
+
+```toml
+[modules.firewall]
+enabled = true
+public_ports = [22, 80, 443]    # optional: other reachable ports are warnings
+```
+
+| Check | Rule |
+|---|---|
+| `firewall.active` | warn: new connections to closed ports are accepted (fine behind a filtering cloud security group: disable it); warn: IPv4 filtered but IPv6 not, with ports listening on `::` (or the other way round) |
+| `firewall.exposed` | info: the ports reachable from other machines (restricted ones in the evidence); with `public_ports`, warn for the others |

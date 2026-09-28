@@ -36,7 +36,9 @@ const (
 	stateClose  = "07"
 )
 
-func readListeners(fs hostfs.FS) ([]Listener, error) {
+// ReadListeners reads the listening sockets of the host with their processes (the firewall module
+// compares them with what the firewall lets in).
+func ReadListeners(fs hostfs.FS) ([]Listener, error) {
 	var ls []Listener
 	var errs []error
 	for _, src := range []struct{ file, proto, family, state string }{

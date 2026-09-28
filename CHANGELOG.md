@@ -61,6 +61,9 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   kernel installed).
 - Optional `timers` module: systemd timers of the system and user managers, schedule, last and
   next run, result of the last run.
+- Optional `firewall` module: nftables (firewalld, ufw and iptables-nft rules included) and
+  iptables-legacy rules evaluated for new connections from anywhere: whether closed ports are
+  filtered, for IPv4 and IPv6, and which listening ports are reachable from other machines.
 
 ### Changed
 - `terminus` without arguments prints the facts as text; use `terminus facts -o json` for JSON.

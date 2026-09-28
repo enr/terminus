@@ -16,6 +16,7 @@ import (
 	"github.com/enr/terminus/internal/modules/cpu"
 	"github.com/enr/terminus/internal/modules/external"
 	"github.com/enr/terminus/internal/modules/extmod"
+	"github.com/enr/terminus/internal/modules/firewall"
 	"github.com/enr/terminus/internal/modules/http"
 	"github.com/enr/terminus/internal/modules/journal"
 	"github.com/enr/terminus/internal/modules/memory"
@@ -61,6 +62,7 @@ func builtinModules(externalFactsDir string) []module.Module {
 		backup.New(),
 		updates.New(),
 		timers.New(),
+		firewall.New(),
 	}
 }
 

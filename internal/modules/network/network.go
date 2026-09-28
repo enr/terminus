@@ -147,7 +147,7 @@ func (m *Module) Collect(_ context.Context, _ *module.Env) (any, error) {
 	if f.DNS, err = readDNS(m.fs); err != nil {
 		errs = append(errs, err)
 	}
-	if f.Listeners, err = readListeners(m.fs); err != nil {
+	if f.Listeners, err = ReadListeners(m.fs); err != nil {
 		errs = append(errs, err)
 	}
 	return f, errors.Join(errs...)
