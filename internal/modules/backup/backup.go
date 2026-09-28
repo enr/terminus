@@ -26,6 +26,7 @@ import (
 	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/hostfs"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/redact"
 	"github.com/enr/terminus/internal/runner"
 )
 
@@ -159,7 +160,9 @@ func (m *Module) Configure(decode module.Decoder) error {
 			errs = append(errs, fmt.Errorf("%s: repository missing", where))
 		}
 		if r.Name == "" {
-			r.Name = r.Repository
+			// The repository can embed credentials (restic's rest: backend, an S3 URL): never
+			// default the name, which becomes the subject of every finding, to the raw value.
+			r.Name = redact.URL(r.Repository)
 		}
 		if names[r.Name] {
 			errs = append(errs, fmt.Errorf("%s: name %q used twice", where, r.Name))
@@ -232,7 +235,9 @@ func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 }
 
 func (m *Module) collect(ctx context.Context, r runner.Runner, rc repoConfig) Repository {
-	repo := Repository{Name: rc.Name, Type: rc.Type, Repository: rc.Repository, User: rc.User, MaxAgeSeconds: rc.maxAge.Seconds()}
+	// Repository is shown as-is in facts and evidence: never the raw configured value, which can
+	// embed credentials (rc.Repository is still used below to actually reach the repository).
+	repo := Repository{Name: rc.Name, Type: rc.Type, Repository: redact.URL(rc.Repository), User: rc.User, MaxAgeSeconds: rc.maxAge.Seconds()}
 	if rc.Unit != "" {
 		repo.Job = unitState(ctx, r, rc.Unit)
 	}

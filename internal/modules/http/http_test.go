@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -124,5 +125,44 @@ func TestConfigureAndSkip(t *testing.T) {
 	}
 	if d := m.Detect(context.Background(), nil); d.Found || d.Config == "" {
 		t.Errorf("detect: %+v", d)
+	}
+}
+
+func TestProbeRedactsCredentials(t *testing.T) {
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u.User = url.UserPassword("me", "s3cr3t")
+
+	m := New()
+	if err := configure(t, m, `[[modules.http.endpoints]]
+url = "`+u.String()+`"
+`); err != nil {
+		t.Fatal(err)
+	}
+	facts, err := m.Collect(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eps := facts.([]Endpoint)
+	if len(eps) != 1 {
+		t.Fatalf("endpoints = %+v", eps)
+	}
+	if gotAuth == "" {
+		t.Fatal("the request was not authenticated: the test is not exercising the credentials")
+	}
+	if strings.Contains(eps[0].URL, "s3cr3t") {
+		t.Errorf("credentials leaked into facts: %q", eps[0].URL)
+	}
+	if !strings.Contains(eps[0].URL, "<redacted>") {
+		t.Errorf("URL not marked as redacted: %q", eps[0].URL)
 	}
 }

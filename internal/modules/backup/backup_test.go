@@ -207,6 +207,35 @@ password_file = "/p"
 	}
 }
 
+func TestRepositoryCredentialsRedacted(t *testing.T) {
+	m := New()
+	if err := configure(t, m, `
+[[modules.backup.repositories]]
+type = "restic"
+repository = "rest:https://backup:s3cr3t@nas:8000/srv-01"
+`); err != nil {
+		t.Fatal(err)
+	}
+	r := &runner.Fake{}
+	facts, err := m.Collect(context.Background(), &module.Env{Runner: r})
+	if err == nil {
+		t.Fatal("expected an error: restic is not installed")
+	}
+	f, ok := facts.(*Facts)
+	if !ok || len(f.Repositories) != 1 {
+		t.Fatalf("facts = %+v", facts)
+	}
+	repo := f.Repositories[0]
+	for _, s := range []string{repo.Name, repo.Repository} {
+		if strings.Contains(s, "s3cr3t") {
+			t.Errorf("credentials leaked into facts: %+v", repo)
+		}
+	}
+	if !strings.Contains(repo.Repository, "<redacted>") || !strings.Contains(repo.Name, "<redacted>") {
+		t.Errorf("repository not marked as redacted: %+v", repo)
+	}
+}
+
 func TestDetect(t *testing.T) {
 	m := New()
 	if d := m.Detect(context.Background(), &module.Env{Runner: &runner.Fake{}}); d.Found {
