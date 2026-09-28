@@ -50,20 +50,23 @@ func TestRunHosts(t *testing.T) {
 	armBin := "/root/.cache/terminus/terminus-" + armSum[:16]
 	r := &runner.Fake{Results: map[string]runner.Result{
 		// srv-01: amd64, binary already cached, warnings.
-		sshKey("apps@srv-01", "", probeCmd):                                                      {Stdout: []byte("x86_64\n/home/apps\n")},
-		sshKey("apps@srv-01", "", "sha256sum "+bin+" 2>/dev/null"):                               {Stdout: []byte(sum + "  " + bin + "\n")},
-		sshKey("apps@srv-01", "", "sudo -n "+bin+" report -o json --color never --only systemd"): {Stdout: reportJSON(t, model.SeverityWarn), ExitCode: 1},
+		sshKey("apps@srv-01", "", probeCmd):                                           {Stdout: []byte("x86_64\n/home/apps\n")},
+		sshKey("apps@srv-01", "", "sha256sum "+bin+" 2>/dev/null"):                    {Stdout: []byte(sum + "  " + bin + "\n")},
+		sshKey("apps@srv-01", "", bin+" report -o json --color never --only systemd"): {Stdout: reportJSON(t, model.SeverityWarn), ExitCode: 1},
 		// arm: arm64 on port 2222, binary copied, failures.
 		sshKey("arm", "2222", probeCmd):                           {Stdout: []byte("aarch64\n/root\n")},
 		sshKey("arm", "2222", "sha256sum "+armBin+" 2>/dev/null"): {ExitCode: 1},
 		sshKey("arm", "2222", "mkdir -p /root/.cache/terminus && cat > "+armBin+".tmp && chmod 755 "+armBin+".tmp && mv "+armBin+".tmp "+armBin): {},
-		sshKey("arm", "2222", "sudo -n "+armBin+" report -o json --color never --only systemd"):                                                  {Stdout: reportJSON(t, model.SeverityFail), ExitCode: 2},
+		sshKey("arm", "2222", armBin+" report -o json --color never --only systemd"):                                                             {Stdout: reportJSON(t, model.SeverityFail), ExitCode: 2},
 		// weird: unsupported architecture.
 		sshKey("weird", "", probeCmd): {Stdout: []byte("riscv64\n/root\n")},
 		// down: ssh fails.
 		sshKey("down", "", probeCmd): {ExitCode: 255, Stderr: []byte("ssh: connect to host down port 22: Connection refused")},
 	}}
-	o.Sudo, o.Args = true, []string{"--only", "systemd"}
+	// --sudo is not used here: it requires --remote-binary (see TestRemoteSudoRequiresRemoteBinary),
+	// since it would otherwise let sudo -n run a binary the ssh user just copied into their own
+	// cache directory.
+	o.Args = []string{"--only", "systemd"}
 	res := Run(context.Background(), r, []string{"apps@srv-01", "arm:2222", "weird", "down"}, o)
 
 	if res[0].Error != "" || res[0].Copied || res[0].ExitCode() != model.ExitWarn || res[0].Arch != "x86_64" {
@@ -124,6 +127,33 @@ func TestRemoteBinaryConfigAndErrors(t *testing.T) {
 	o3.Arch = "arm64" // local arm64: an amd64 host needs terminus-linux-amd64
 	if res := Run(context.Background(), r2, []string{"h"}, o3); !strings.Contains(res[0].Error, "terminus-linux-amd64") {
 		t.Errorf("missing binary: %+v", res[0])
+	}
+}
+
+func TestRemoteSudoRequiresRemoteBinary(t *testing.T) {
+	// --sudo copies nothing when --remote-binary is set: sudo -n only ever runs a binary the
+	// ssh user does not control.
+	o, _, _ := setup(t)
+	r := &runner.Fake{Results: map[string]runner.Result{
+		sshKey("h", "", probeCmd): {Stdout: []byte("x86_64\n/root\n")},
+		sshKey("h", "", "sudo -n /usr/local/bin/terminus report -o json --color never"): {Stdout: reportJSON(t, model.SeverityOK)},
+	}}
+	o.Sudo, o.RemoteBinary = true, "/usr/local/bin/terminus"
+	if res := Run(context.Background(), r, []string{"h"}, o); res[0].Error != "" {
+		t.Errorf("sudo with --remote-binary: %+v", res[0])
+	}
+
+	// Without --remote-binary, --sudo would run sudo -n on a binary just copied into the ssh
+	// user's own (writable) cache directory: refuse before even connecting.
+	o2, _, _ := setup(t)
+	r2 := &runner.Fake{}
+	o2.Sudo = true
+	res := Run(context.Background(), r2, []string{"h"}, o2)
+	if !strings.Contains(res[0].Error, "--sudo requires --remote-binary") {
+		t.Errorf("error = %q, want the --remote-binary requirement", res[0].Error)
+	}
+	if len(r2.Calls) != 0 {
+		t.Errorf("ssh was called before the check: %v", r2.Calls)
 	}
 }
 

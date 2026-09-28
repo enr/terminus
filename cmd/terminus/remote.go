@@ -38,11 +38,12 @@ HOST is anything ssh accepts, with an optional port: srv-01, apps@web-02, web-03
 terminus is copied to ~/.cache/terminus on each host (only when that version is not there
 already); for another architecture put terminus-linux-<arch> in --binaries-dir or next to
 terminus (see .sdlc/build-dist), or use a terminus installed there with --remote-binary.
-The flags after "--" go to the remote terminus.
+--sudo requires --remote-binary: sudo must run a binary the ssh user cannot replace, not one
+just copied into their own cache directory. The flags after "--" go to the remote terminus.
 
 Exit code: the worst among the hosts; 3 when a host cannot be reached or fails.`,
 		Example: `  terminus remote srv-01
-  terminus remote --sudo srv-01 web-02 -- --only systemd,podman,quadlet
+  terminus remote --sudo --remote-binary /usr/local/bin/terminus srv-01 web-02 -- --only systemd,podman,quadlet
   terminus remote --hosts-file hosts.txt --output-dir reports/ -o markdown > all.md
   terminus diff reports-before/srv-01.json reports/srv-01.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -95,7 +96,7 @@ Exit code: the worst among the hosts; 3 when a host cannot be reached or fails.`
 	f.StringVarP(&format, "output", "o", "text", "output format: text, markdown, json")
 	f.StringVar(&hostsFile, "hosts-file", "", "read more hosts from this file, one per line (# comments)")
 	f.StringVar(&outputDir, "output-dir", "", "save each JSON report in DIR/<host>.json")
-	f.BoolVar(&o.Sudo, "sudo", false, "run the remote terminus with sudo -n (to inspect the managers and containers of every user)")
+	f.BoolVar(&o.Sudo, "sudo", false, "run the remote terminus with sudo -n (to inspect the managers and containers of every user); requires --remote-binary")
 	f.StringVar(&o.RemoteBinary, "remote-binary", "", "use this terminus installed on the hosts instead of copying one")
 	f.StringVar(&o.BinariesDir, "binaries-dir", "", "directory with terminus-linux-<arch> for other architectures")
 	f.StringVar(&o.RemoteConfig, "remote-config", "", "copy this terminus.toml to the hosts and use it")

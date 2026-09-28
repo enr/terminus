@@ -199,14 +199,27 @@ func (r *Report) FactsTree() map[string]any {
 	return t
 }
 
-// ExitCode maps the report to the CLI exit code: fail findings win over warn ones.
+// ExitCode maps the report to the CLI exit code: fail findings win over warn ones. A module that
+// could not be fully collected (status error or partial) counts as a warning even when the
+// findings computed from its incomplete facts look fine: the report is not to be trusted blindly
+// just because nothing failed a threshold.
 func (r *Report) ExitCode() int {
 	switch {
 	case r.Summary.Fail > 0:
 		return ExitFail
-	case r.Summary.Warn > 0:
+	case r.Summary.Warn > 0, r.hasModuleProblem():
 		return ExitWarn
 	default:
 		return ExitOK
 	}
+}
+
+// hasModuleProblem tells whether a module was not fully collected.
+func (r *Report) hasModuleProblem() bool {
+	for _, m := range r.Modules {
+		if m.Status == StatusError || m.Status == StatusPartial {
+			return true
+		}
+	}
+	return false
 }

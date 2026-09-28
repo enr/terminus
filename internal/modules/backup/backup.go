@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/hostfs"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/redact"
 	"github.com/enr/terminus/internal/runner"
 )
 
@@ -103,13 +105,14 @@ type repoConfig struct {
 
 // Module collects the backup facts.
 type Module struct {
-	fs    hostfs.FS
-	repos []repoConfig
-	now   func() time.Time
+	fs       hostfs.FS
+	repos    []repoConfig
+	now      func() time.Time
+	hostname func() (string, error)
 }
 
 // New returns the backup module, without repositories until configured.
-func New() *Module { return &Module{fs: hostfs.Host, now: time.Now} }
+func New() *Module { return &Module{fs: hostfs.Host, now: time.Now, hostname: os.Hostname} }
 
 // Name implements module.Module.
 func (*Module) Name() string { return Name }
@@ -131,7 +134,7 @@ type = "restic"
 repository = "/srv/backup/restic"   # restic/borg repository; pgbackrest: the stanza
 password_file = ""                  # restic and borg
 env_file = ""                       # KEY=value lines for the tool (S3/B2 credentials, BORG_RSH, ...)
-host = ""                           # restic: only the snapshots of this host
+host = ""                           # restic: only the snapshots of this host (default: this machine's hostname)
 user = ""                           # run the tool as this user (pgbackrest: postgres)
 unit = ""                           # systemd unit that makes the backups
 max_age = ""                        # default: the backup.age thresholds`
@@ -159,7 +162,9 @@ func (m *Module) Configure(decode module.Decoder) error {
 			errs = append(errs, fmt.Errorf("%s: repository missing", where))
 		}
 		if r.Name == "" {
-			r.Name = r.Repository
+			// The repository can embed credentials (restic's rest: backend, an S3 URL): never
+			// default the name, which becomes the subject of every finding, to the raw value.
+			r.Name = redact.URL(r.Repository)
 		}
 		if names[r.Name] {
 			errs = append(errs, fmt.Errorf("%s: name %q used twice", where, r.Name))
@@ -232,7 +237,9 @@ func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 }
 
 func (m *Module) collect(ctx context.Context, r runner.Runner, rc repoConfig) Repository {
-	repo := Repository{Name: rc.Name, Type: rc.Type, Repository: rc.Repository, User: rc.User, MaxAgeSeconds: rc.maxAge.Seconds()}
+	// Repository is shown as-is in facts and evidence: never the raw configured value, which can
+	// embed credentials (rc.Repository is still used below to actually reach the repository).
+	repo := Repository{Name: rc.Name, Type: rc.Type, Repository: redact.URL(rc.Repository), User: rc.User, MaxAgeSeconds: rc.maxAge.Seconds()}
 	if rc.Unit != "" {
 		repo.Job = unitState(ctx, r, rc.Unit)
 	}
@@ -263,8 +270,18 @@ func (m *Module) collect(ctx context.Context, r runner.Runner, rc repoConfig) Re
 			cmd.Env = append(cmd.Env, "RESTIC_PASSWORD_FILE="+rc.PasswordFile)
 		}
 		cmd.Args = []string{"snapshots", "--json", "--no-lock", "--latest", "1"}
-		if rc.Host != "" {
-			cmd.Args = append(cmd.Args, "--host", rc.Host)
+		// "--latest 1" without --host returns the latest snapshot of every host and path set
+		// backed up to the repository: in a repository shared with other machines, a sibling's
+		// fresh snapshot would hide this host's own backups having stopped. Default to this
+		// host, same as restic backup would tag a new snapshot with.
+		host := rc.Host
+		if host == "" {
+			if h, err := m.hostname(); err == nil {
+				host = h
+			}
+		}
+		if host != "" {
+			cmd.Args = append(cmd.Args, "--host", host)
 		}
 		parse = parseRestic
 	case Borg:

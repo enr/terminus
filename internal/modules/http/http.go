@@ -24,6 +24,7 @@ import (
 	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/redact"
 )
 
 // Name of the module.
@@ -160,11 +161,13 @@ func (m *Module) Collect(ctx context.Context, _ *module.Env) (any, error) {
 	return out, nil
 }
 
+// probe requests e.URL, which may embed credentials (basic auth in the URL): the request uses it
+// as configured, but the endpoint reported back (facts, findings, evidence) never does.
 func (m *Module) probe(ctx context.Context, client *http.Client, e endpointConfig) Endpoint {
-	ep := Endpoint{URL: e.URL, ExpectedStatus: e.Status}
+	ep := Endpoint{URL: redact.URL(e.URL), ExpectedStatus: e.Status}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.URL, nil)
 	if err != nil {
-		ep.Error = err.Error()
+		ep.Error = redact.URL(err.Error())
 		return ep
 	}
 	v := buildinfo.Version
@@ -176,7 +179,7 @@ func (m *Module) probe(ctx context.Context, client *http.Client, e endpointConfi
 	res, err := client.Do(req)
 	ep.DurationMs = time.Since(start).Milliseconds()
 	if err != nil {
-		ep.Error = err.Error()
+		ep.Error = redact.URL(err.Error())
 		return ep
 	}
 	res.Body.Close()

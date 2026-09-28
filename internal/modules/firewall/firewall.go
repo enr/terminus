@@ -149,6 +149,15 @@ func (m *Module) Detect(_ context.Context, env *module.Env) module.Detection {
 	return module.Detection{Found: true, Reason: strings.Join(found, ", ") + " installed (reading the rules requires root)", Config: "enabled = true"}
 }
 
+// dualStack tells whether a socket bound to the IPv6 wildcard address also accepts IPv4 clients
+// (through IPv4-mapped addresses): the kernel-wide default unless net.ipv6.bindv6only=1. A
+// process can still opt out per socket with IPV6_V6ONLY, which cannot be observed from outside
+// it, so this is the safer of the two assumptions to get wrong.
+func (m *Module) dualStack() bool {
+	v, err := m.fs.ReadString("/proc/sys/net/ipv6/bindv6only")
+	return err != nil || strings.TrimSpace(v) != "1"
+}
+
 // Collect implements module.Module.
 func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 	if env == nil || env.Runner == nil {
@@ -231,6 +240,7 @@ func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 	if err != nil {
 		errs = append(errs, fmt.Errorf("listening sockets: %w", err))
 	}
+	dualStack := m.dualStack()
 	seen := map[string]bool{}
 	for _, l := range ls {
 		if l.Scope != "any" {
@@ -241,11 +251,20 @@ func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 			continue
 		}
 		seen[key] = true
-		views := v4
+		reach := reachAll(v4, l.Protocol, l.Port)
 		if l.Family == "inet6" {
-			views = v6
+			reach = reachAll(v6, l.Protocol, l.Port)
+			// A socket bound to :: also accepts IPv4 clients through IPv4-mapped addresses
+			// unless the application opted out with IPV6_V6ONLY (which cannot be observed from
+			// outside the process) or the kernel default (net.ipv6.bindv6only) says otherwise. A
+			// client gets in through whichever path lets it, so the more open of the two wins:
+			// otherwise a listener open over IPv4 but filtered over IPv6 would be reported as
+			// filtered.
+			if dualStack {
+				reach = moreOpen(reach, reachAll(v4, l.Protocol, l.Port))
+			}
 		}
-		fl := Listener{Protocol: l.Protocol, Family: l.Family, Port: l.Port, Process: l.Process, Reach: reachAll(views, l.Protocol, l.Port)}
+		fl := Listener{Protocol: l.Protocol, Family: l.Family, Port: l.Port, Process: l.Process, Reach: reach}
 		if containerProxies[l.Process] {
 			fl.Container = true
 		}

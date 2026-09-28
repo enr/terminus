@@ -75,6 +75,10 @@ An external module is an executable in the modules directory (`/etc/terminus/mod
 named after the file without extension (`rsync.sh` is the `rsync` module; lowercase letters,
 digits, `-` and `_`) and runs by default: `enabled = false` in `[modules.rsync]` disables it.
 
+The file (and the directory itself) must be owned by root or by the user running terminus, and not
+writable by anyone else: terminus runs it as trusted code, so one it cannot vouch for is refused
+and reported as an error instead of run.
+
 It must print on standard output, within the module timeout and exiting with code 0:
 
 ```json

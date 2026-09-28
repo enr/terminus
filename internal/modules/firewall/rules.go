@@ -81,6 +81,20 @@ const (
 	Filtered = "filtered"
 )
 
+// reachRank orders the reachability values from the most to the least open: Open beats Restricted
+// beats Filtered.
+var reachRank = map[string]int{Filtered: 0, Restricted: 1, Open: 2}
+
+// moreOpen returns whichever of two reachability values a client could more easily use to get in:
+// used when a port can be reached through more than one path (IPv4 and IPv6 on a dual-stack
+// socket), since a client goes through whichever path lets it in.
+func moreOpen(a, b string) string {
+	if reachRank[b] > reachRank[a] {
+		return b
+	}
+	return a
+}
+
 // reach evaluates the input base chains for a new connection to port/proto: strictly (only the
 // rules that hold for any client) and leniently (also the accept rules for some clients).
 func (rs *ruleset) reach(proto string, port int) string {
