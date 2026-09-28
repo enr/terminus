@@ -77,10 +77,10 @@ func fakeRunner() *runner.Fake {
 	return &runner.Fake{
 		Paths: map[string]string{"restic": "/usr/bin/restic", "borg": "/usr/bin/borg", "pgbackrest": "/usr/bin/pgbackrest"},
 		Results: map[string]runner.Result{
-			"restic snapshots --json --no-lock --latest 1 --host srv-01": {Stdout: []byte(resticOut)},
-			"restic snapshots --json --no-lock --latest 1":               {ExitCode: 1, Stderr: []byte("Fatal: unable to open config file\nFatal: wrong password or no key found\n")},
-			"borg list --json --last 1 --bypass-lock":                    {Stdout: []byte(borgOut)},
-			"postgres|pgbackrest info --output=json --stanza=main":       {Stdout: []byte(pgbackrestOut)},
+			"restic snapshots --json --no-lock --latest 1 --host srv-01":    {Stdout: []byte(resticOut)},
+			"restic snapshots --json --no-lock --latest 1 --host auto-host": {ExitCode: 1, Stderr: []byte("Fatal: unable to open config file\nFatal: wrong password or no key found\n")},
+			"borg list --json --last 1 --bypass-lock":                       {Stdout: []byte(borgOut)},
+			"postgres|pgbackrest info --output=json --stanza=main":          {Stdout: []byte(pgbackrestOut)},
 			"systemctl show --property=LoadState,ActiveState,Result,ExecMainStatus,InactiveEnterTimestamp -- restic.service": {
 				Stdout: []byte("LoadState=loaded\nActiveState=inactive\nResult=success\nExecMainStatus=0\nInactiveEnterTimestamp=Tue 2026-03-10 02:10:00 CET\n")},
 			"systemctl show --property=LoadState,ActiveState,Result,ExecMainStatus,InactiveEnterTimestamp -- pgbackrest.service": {
@@ -93,6 +93,9 @@ func TestCollectAndCheck(t *testing.T) {
 	m := New()
 	m.fs = hostfstest.New(t, map[string]string{"/etc/restic/env": "# credentials\nexport AWS_ACCESS_KEY_ID=abc\nAWS_SECRET_ACCESS_KEY='s3cr3t'\n"})
 	m.now = func() time.Time { return now }
+	// "offsite" has no configured host: the auto-detected one, distinct from "home"'s explicit
+	// "srv-01", is what must show up on the restic command line.
+	m.hostname = func() (string, error) { return "auto-host", nil }
 	if err := configure(t, m, cfg); err != nil {
 		t.Fatal(err)
 	}
@@ -233,6 +236,55 @@ repository = "rest:https://backup:s3cr3t@nas:8000/srv-01"
 	}
 	if !strings.Contains(repo.Repository, "<redacted>") || !strings.Contains(repo.Name, "<redacted>") {
 		t.Errorf("repository not marked as redacted: %+v", repo)
+	}
+}
+
+func TestResticDefaultsHostToThisMachine(t *testing.T) {
+	// Without a configured host, "restic snapshots --latest 1" returns the latest snapshot of
+	// every host and path set that backed up to the repository: in a repository shared with
+	// other machines, a sibling's fresh snapshot would hide this host's own backups having
+	// stopped. The module must filter to its own hostname by default.
+	m := New()
+	m.hostname = func() (string, error) { return "srv-02", nil }
+	if err := configure(t, m, `
+[[modules.backup.repositories]]
+type = "restic"
+repository = "/srv/shared-restic"
+`); err != nil {
+		t.Fatal(err)
+	}
+	r := &runner.Fake{
+		Paths: map[string]string{"restic": "/usr/bin/restic"},
+		Results: map[string]runner.Result{
+			"restic snapshots --json --no-lock --latest 1 --host srv-02": {Stdout: []byte(resticOut)},
+		},
+	}
+	facts, err := m.Collect(context.Background(), &module.Env{Runner: r})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f := facts.(*Facts); len(f.Repositories) != 1 || f.Repositories[0].Error != "" {
+		t.Fatalf("facts = %+v", f)
+	}
+
+	// If the hostname cannot be determined, fall back to no filter rather than failing outright.
+	m2 := New()
+	m2.hostname = func() (string, error) { return "", errors.New("no hostname") }
+	if err := configure(t, m2, `
+[[modules.backup.repositories]]
+type = "restic"
+repository = "/srv/shared-restic"
+`); err != nil {
+		t.Fatal(err)
+	}
+	r2 := &runner.Fake{
+		Paths: map[string]string{"restic": "/usr/bin/restic"},
+		Results: map[string]runner.Result{
+			"restic snapshots --json --no-lock --latest 1": {Stdout: []byte(resticOut)},
+		},
+	}
+	if _, err := m2.Collect(context.Background(), &module.Env{Runner: r2}); err != nil {
+		t.Fatal(err)
 	}
 }
 

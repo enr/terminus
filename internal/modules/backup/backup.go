@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -104,13 +105,14 @@ type repoConfig struct {
 
 // Module collects the backup facts.
 type Module struct {
-	fs    hostfs.FS
-	repos []repoConfig
-	now   func() time.Time
+	fs       hostfs.FS
+	repos    []repoConfig
+	now      func() time.Time
+	hostname func() (string, error)
 }
 
 // New returns the backup module, without repositories until configured.
-func New() *Module { return &Module{fs: hostfs.Host, now: time.Now} }
+func New() *Module { return &Module{fs: hostfs.Host, now: time.Now, hostname: os.Hostname} }
 
 // Name implements module.Module.
 func (*Module) Name() string { return Name }
@@ -132,7 +134,7 @@ type = "restic"
 repository = "/srv/backup/restic"   # restic/borg repository; pgbackrest: the stanza
 password_file = ""                  # restic and borg
 env_file = ""                       # KEY=value lines for the tool (S3/B2 credentials, BORG_RSH, ...)
-host = ""                           # restic: only the snapshots of this host
+host = ""                           # restic: only the snapshots of this host (default: this machine's hostname)
 user = ""                           # run the tool as this user (pgbackrest: postgres)
 unit = ""                           # systemd unit that makes the backups
 max_age = ""                        # default: the backup.age thresholds`
@@ -268,8 +270,18 @@ func (m *Module) collect(ctx context.Context, r runner.Runner, rc repoConfig) Re
 			cmd.Env = append(cmd.Env, "RESTIC_PASSWORD_FILE="+rc.PasswordFile)
 		}
 		cmd.Args = []string{"snapshots", "--json", "--no-lock", "--latest", "1"}
-		if rc.Host != "" {
-			cmd.Args = append(cmd.Args, "--host", rc.Host)
+		// "--latest 1" without --host returns the latest snapshot of every host and path set
+		// backed up to the repository: in a repository shared with other machines, a sibling's
+		// fresh snapshot would hide this host's own backups having stopped. Default to this
+		// host, same as restic backup would tag a new snapshot with.
+		host := rc.Host
+		if host == "" {
+			if h, err := m.hostname(); err == nil {
+				host = h
+			}
+		}
+		if host != "" {
+			cmd.Args = append(cmd.Args, "--host", host)
 		}
 		parse = parseRestic
 	case Borg:
