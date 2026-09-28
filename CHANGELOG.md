@@ -16,9 +16,11 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   filesystem usage and inodes, fstab options, swap areas, interface state and counters,
   default routes, DNS (systemd-resolved aware), listening sockets with their process.
 - Path queries select list elements by name: `network.interfaces.eth0`, `storage.filesystems./var`.
-- Configuration file `/etc/terminus/terminus.toml` (`--config`), decoded strictly: enable or disable
-  modules, module settings, disabled checks, checks excluded by subject glob (`checks.exclude`),
-  thresholds (docs/configuration.md).
+- Configuration file, decoded strictly: enable or disable modules, module settings, disabled
+  checks, checks excluded by subject glob (`checks.exclude`), thresholds
+  (docs/configuration.md). Merged from three layers, system (`/etc/terminus/terminus.toml`),
+  user (`~/.config/terminus/terminus.toml`) and per-run (`./terminus.toml`); `--config` reads a
+  single file instead.
 - `modules list`, `modules detect`, `checks list`, `config validate`, `config example` commands;
   `--modules`, `--no-modules`, `--only` and `--modules-dir` flags.
 - External modules: executables in `/etc/terminus/modules.d` printing facts and findings as JSON.

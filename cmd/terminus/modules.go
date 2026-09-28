@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
+	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/module"
 )
 
@@ -304,7 +305,12 @@ func newConfigCmd(g *globalOptions, stdout, stderr io.Writer) *cobra.Command {
 				return err
 			}
 			if a.cfg.Path == "" {
-				fmt.Fprintf(stdout, "no configuration file at %s: using the defaults\n", g.configPath)
+				if g.changed("config") {
+					fmt.Fprintf(stdout, "no configuration file at %s: using the defaults\n", g.configPath)
+				} else {
+					fmt.Fprintf(stdout, "no configuration file in %s, %s or %s: using the defaults\n",
+						config.DefaultPath, config.UserPath(), config.LocalPath)
+				}
 				return nil
 			}
 			mods, _ := a.reg.Enabled(a.sel)

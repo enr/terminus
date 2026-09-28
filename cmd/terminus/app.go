@@ -79,7 +79,13 @@ func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
 	}
 	log := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: level}))
 
-	cfg, err := config.Load(g.configPath, changed("config"))
+	var cfg *config.Config
+	var err error
+	if changed("config") {
+		cfg, err = config.Load(g.configPath, true)
+	} else {
+		cfg, err = config.LoadHierarchy()
+	}
 	if err != nil {
 		return nil, err
 	}

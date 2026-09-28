@@ -1,10 +1,24 @@
 # Configuration
 
-terminus reads `/etc/terminus/terminus.toml` when it exists; `--config path` reads another file
-(and then the file must exist). Without a file every default applies.
+terminus merges up to three layers, from weakest to strongest:
+
+1. system: `/etc/terminus/terminus.toml`
+2. user: `$XDG_CONFIG_HOME/terminus/terminus.toml` (`~/.config/terminus/terminus.toml` by default)
+3. per-run: `./terminus.toml`, in the current directory
+
+A layer that doesn't exist is skipped, and the defaults apply when none exist. Tables merge key
+by key, so a lower layer's `[modules.http]` still applies to keys a higher layer doesn't repeat;
+anything else, including arrays like `checks.disable`, is replaced wholesale by the highest layer
+that sets it (not concatenated). `[checks.exclude]` is a table of arrays, so it merges per check
+ID like any other table: a higher layer adding patterns for a different check ID does not drop a
+lower layer's patterns for another one, but it replaces the whole array for the same ID.
+
+`--config path` bypasses all three layers and reads exactly that file instead (and then the file
+must exist).
 
 `terminus config example` prints a file with every module and threshold commented out at its
-default; `terminus config validate` checks a file.
+default; `terminus config validate` checks the effective (merged) configuration, or a single file
+with `--config`.
 
 ```toml
 # Maximum time for each module.

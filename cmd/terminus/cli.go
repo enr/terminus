@@ -112,7 +112,7 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 	pf.BoolVar(&g.debug, "debug", false, "log collection errors and diagnostics to stderr")
 	pf.DurationVar(&g.timeout, "timeout", engine.DefaultTimeout, "maximum time for each module")
 	pf.StringVar(&g.color, "color", string(output.ColorAuto), "use colors: auto, always, never")
-	pf.StringVar(&g.configPath, "config", config.DefaultPath, "configuration file (optional unless given)")
+	pf.StringVar(&g.configPath, "config", config.DefaultPath, "configuration file; bypasses the system/user/local layering (optional unless given)")
 	pf.StringVar(&g.externalFactsDir, "external-facts-dir", external.DefaultDir, "path to the external facts directory")
 	pf.StringVar(&g.modulesDir, "modules-dir", config.DefaultModulesDir, "path to the external modules directory")
 	pf.StringSliceVar(&g.only, "only", nil, "run only these modules")

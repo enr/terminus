@@ -204,6 +204,106 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+func TestLoadHierarchy(t *testing.T) {
+	dir := t.TempDir()
+	system := filepath.Join(dir, "system.toml")
+	user := filepath.Join(dir, "user.toml")
+	local := filepath.Join(dir, "local.toml")
+
+	// No layer at all: defaults.
+	c, err := loadHierarchy([]string{system, user, local})
+	if err != nil || c.Path != "" || c.Timeout != 0 {
+		t.Fatalf("no layers: %+v %v", c, err)
+	}
+
+	if err := os.WriteFile(system, []byte(`
+timeout = "30s"
+
+[modules.http]
+enabled = true
+url = "https://example.org"
+count = 1
+
+[checks]
+disable = ["disk.readonly"]
+
+[checks.exclude]
+"disk.readonly" = ["*:app-*.service"]
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(user, []byte(`
+[modules.http]
+count = 2
+
+[checks]
+disable = ["backup.*"]
+
+[checks.exclude]
+"disk.usage" = ["*:app-*.service"]
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(local, []byte(`
+timeout = "5s"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err = loadHierarchy([]string{system, user, local})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, cm := registry(t)
+	if err := c.Configure(reg); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Validate(reg); err != nil {
+		t.Fatal(err)
+	}
+	if c.Timeout != 5*time.Second {
+		t.Errorf("local layer should override timeout: %v", c.Timeout)
+	}
+	if !c.Enabled["http"] {
+		t.Errorf("system layer's enabled should survive: %v", c.Enabled)
+	}
+	if cm.URL != "https://example.org" || cm.Count != 2 {
+		t.Errorf("table should merge key by key: %+v", cm)
+	}
+	if cm.Count != 2 {
+		t.Errorf("user layer should override count: %+v", cm)
+	}
+	// Arrays are replaced wholesale, not concatenated: the user layer's disable list wins.
+	if c.Checks.IsDisabled("disk.readonly") {
+		t.Errorf("array should be replaced, not merged: %v", c.Checks.Disabled)
+	}
+	if !c.Checks.IsDisabled("backup.age") {
+		t.Errorf("user layer's disable list missing: %v", c.Checks.Disabled)
+	}
+	// checks.exclude is a table of arrays: it merges per check ID, unlike checks.disable.
+	if !c.Checks.IsExcluded("disk.readonly", "user:enrico:app-x.service") {
+		t.Errorf("system layer's exclude entry should survive: %v", c.Checks.Exclude)
+	}
+	if !c.Checks.IsExcluded("disk.usage", "user:enrico:app-x.service") {
+		t.Errorf("user layer's exclude entry missing: %v", c.Checks.Exclude)
+	}
+	if c.Path != strings.Join([]string{system, user, local}, ", ") {
+		t.Errorf("path: %q", c.Path)
+	}
+
+	// A single layer works too.
+	if err := os.Remove(system); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(local); err != nil {
+		t.Fatal(err)
+	}
+	c, err = loadHierarchy([]string{system, user, local})
+	if err != nil || c.Path != user {
+		t.Fatalf("single layer: %+v %v", c, err)
+	}
+}
+
 func TestParseDuration(t *testing.T) {
 	cases := map[string]time.Duration{"14d": 14 * 24 * time.Hour, "1d12h": 36 * time.Hour, "90s": 90 * time.Second}
 	for in, want := range cases {

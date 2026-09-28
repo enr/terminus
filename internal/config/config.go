@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,6 +38,9 @@ import (
 
 // DefaultPath is where terminus looks for its configuration.
 const DefaultPath = "/etc/terminus/terminus.toml"
+
+// LocalPath is the per-run layer, read from the current directory.
+const LocalPath = "terminus.toml"
 
 // DefaultModulesDir holds the external modules.
 const DefaultModulesDir = "/etc/terminus/modules.d"
@@ -85,6 +89,84 @@ func Load(path string, required bool) (*Config, error) {
 	}
 	c.Path = path
 	return c, nil
+}
+
+// UserPath is the per-user layer: $XDG_CONFIG_HOME/terminus/terminus.toml, or
+// ~/.config/terminus/terminus.toml when XDG_CONFIG_HOME is unset. Empty when it cannot be
+// determined (no home directory).
+func UserPath() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "terminus", "terminus.toml")
+}
+
+// LoadHierarchy merges the system, user and per-run layers: DefaultPath, UserPath and
+// LocalPath, in that order. Each layer overrides the keys it sets; tables merge key by key so
+// that, say, a user file can disable one check without repeating the system file's modules.
+// Layers that don't exist are skipped, and the zero value applies when none exist. Explicit
+// --config bypasses this and loads a single file instead (see Load).
+func LoadHierarchy() (*Config, error) {
+	var paths []string
+	paths = append(paths, DefaultPath)
+	if p := UserPath(); p != "" {
+		paths = append(paths, p)
+	}
+	paths = append(paths, LocalPath)
+	return loadHierarchy(paths)
+}
+
+func loadHierarchy(paths []string) (*Config, error) {
+	var merged map[string]any
+	var loaded []string
+	for _, p := range paths {
+		data, err := os.ReadFile(p)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		var m map[string]any
+		if _, err := toml.Decode(string(data), &m); err != nil {
+			return nil, fmt.Errorf("%s: %w", p, err)
+		}
+		merged = mergeTables(merged, m)
+		loaded = append(loaded, p)
+	}
+	c := &Config{Enabled: map[string]bool{}}
+	if len(loaded) == 0 {
+		return c, nil
+	}
+	var buf strings.Builder
+	if err := toml.NewEncoder(&buf).Encode(merged); err != nil {
+		return nil, fmt.Errorf("merging configuration: %w", err)
+	}
+	if err := c.parse(buf.String()); err != nil {
+		return nil, fmt.Errorf("%s: %w", strings.Join(loaded, ", "), err)
+	}
+	c.Path = strings.Join(loaded, ", ")
+	return c, nil
+}
+
+// mergeTables merges src into dst, recursing into nested tables; any other value (including
+// arrays, so "checks.disable" is replaced wholesale rather than concatenated) is overwritten by
+// src.
+func mergeTables(dst, src map[string]any) map[string]any {
+	if dst == nil {
+		dst = map[string]any{}
+	}
+	for k, v := range src {
+		if sv, ok := v.(map[string]any); ok {
+			if dv, ok := dst[k].(map[string]any); ok {
+				dst[k] = mergeTables(dv, sv)
+				continue
+			}
+		}
+		dst[k] = v
+	}
+	return dst
 }
 
 // Parse reads a configuration from a string (tests, --config -).
