@@ -18,7 +18,9 @@ must exist).
 
 `terminus config example` prints a file with every module and threshold commented out at its
 default; `terminus config validate` checks the effective (merged) configuration, or a single file
-with `--config`.
+with `--config`. `terminus config show` lists the files considered (found or not) and prints the
+merged configuration, syntax highlighted on a terminal; it does not validate it, and its output
+is itself a valid `terminus.toml`.
 
 ```toml
 # Maximum time for each module.

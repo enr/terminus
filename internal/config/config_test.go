@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -301,6 +302,52 @@ timeout = "5s"
 	c, err = loadHierarchy([]string{system, user, local})
 	if err != nil || c.Path != user {
 		t.Fatalf("single layer: %+v %v", c, err)
+	}
+}
+
+func TestMerge(t *testing.T) {
+	dir := t.TempDir()
+	system := filepath.Join(dir, "system.toml")
+	user := filepath.Join(dir, "user.toml")
+	local := filepath.Join(dir, "local.toml")
+	if err := os.WriteFile(system, []byte("timeout = \"30s\"\n[modules.http]\nurl = \"https://example.org\"\n[checks]\ndisable = [\"disk.*\"]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Merge does not validate: an invalid timeout is shown as is.
+	if err := os.WriteFile(local, []byte("timeout = 5\n[checks]\ndisable = [\"backup.*\"]\n[modules.typo]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Merge([]string{system, user, local})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Layer{{system, true}, {user, false}, {local, true}}
+	if fmt.Sprint(m.Layers) != fmt.Sprint(want) {
+		t.Errorf("layers: %v", m.Layers)
+	}
+	got, err := m.TOML()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantTOML := `timeout = 5
+
+[checks]
+disable = ["backup.*"]
+
+[modules.http]
+url = "https://example.org"
+
+[modules.typo]
+`
+	if got != wantTOML {
+		t.Errorf("merged:\n%s\nwant:\n%s", got, wantTOML)
+	}
+
+	if err := os.WriteFile(user, []byte("[checks\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Merge([]string{system, user, local}); err == nil || !strings.Contains(err.Error(), user) {
+		t.Errorf("syntax error without path: %v", err)
 	}
 }
 

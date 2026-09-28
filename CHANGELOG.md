@@ -21,7 +21,7 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   (docs/configuration.md). Merged from three layers, system (`/etc/terminus/terminus.toml`),
   user (`~/.config/terminus/terminus.toml`) and per-run (`./terminus.toml`); `--config` reads a
   single file instead.
-- `modules list`, `modules detect`, `checks list`, `config validate`, `config example` commands;
+- `modules list`, `modules detect`, `checks list`, `config validate`, `config example`, `config show` commands;
   `--modules`, `--no-modules`, `--only` and `--modules-dir` flags.
 - External modules: executables in `/etc/terminus/modules.d` printing facts and findings as JSON.
 - Optional `http` module: status, latency and TLS certificate expiry of configured endpoints.

@@ -29,6 +29,7 @@ terminus modules detect   which optional modules fit this machine
 terminus checks list      checks with their effective thresholds
 terminus config example   a commented terminus.toml with every setting
 terminus config validate  check the configuration
+terminus config show      the files considered and the merged configuration
 terminus version
 ```
 

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 
 	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/output"
 )
 
 // minWrap is the least room for the last column to wrap beside the others; with less it goes on
@@ -291,7 +294,7 @@ func newChecksCmd(g *globalOptions, stdout, stderr io.Writer) *cobra.Command {
 func newConfigCmd(g *globalOptions, stdout, stderr io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "Validate the configuration or print an example",
+		Short: "Show or validate the configuration, or print an example",
 	}
 	validate := &cobra.Command{
 		Use:   "validate",
@@ -334,8 +337,76 @@ func newConfigCmd(g *globalOptions, stdout, stderr io.Writer) *cobra.Command {
 			return writeExample(stdout, a.reg)
 		},
 	}
-	cmd.AddCommand(validate, example)
+	show := &cobra.Command{
+		Use:   "show",
+		Short: "Print the layers considered and the merged configuration",
+		Long: `Print the configuration files considered, weakest first, and the configuration merged from
+the ones found. The output is itself a valid terminus.toml: the list of files is a comment.
+
+The configuration is shown as read, without validating it: "terminus config validate" checks it.`,
+		Example: `  terminus config show
+  terminus config show --color never > merged.toml`,
+		Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error {
+			paths := config.HierarchyPaths()
+			if g.changed("config") {
+				paths = []string{g.configPath}
+			}
+			m, err := config.Merge(paths)
+			if err != nil {
+				return err
+			}
+			if g.changed("config") && len(m.Loaded()) == 0 {
+				return fmt.Errorf("open %s: %w", g.configPath, os.ErrNotExist)
+			}
+			o, err := renderOptions(g, stdout)
+			if err != nil {
+				return err
+			}
+			src, err := showConfig(m)
+			if err != nil {
+				return err
+			}
+			return output.HighlightTOML(stdout, src, o.Color)
+		},
+	}
+	cmd.AddCommand(validate, example, show)
 	return cmd
+}
+
+// showConfig lists the layers of m as comments, followed by the merged configuration.
+func showConfig(m *config.Merged) (string, error) {
+	var b strings.Builder
+	b.WriteString("# Configuration files, weakest first:\n")
+	width := 0
+	for _, l := range m.Layers {
+		width = max(width, len(displayPath(l.Path)))
+	}
+	for _, l := range m.Layers {
+		state := "not found"
+		if l.Found {
+			state = "loaded"
+		}
+		fmt.Fprintf(&b, "#   %-*s  %s\n", width, displayPath(l.Path), state)
+	}
+	if len(m.Loaded()) == 0 {
+		b.WriteString("#\n# No configuration file found: every default applies.\n")
+		return b.String(), nil
+	}
+	src, err := m.TOML()
+	if err != nil {
+		return "", err
+	}
+	b.WriteString("\n" + src)
+	return b.String(), nil
+}
+
+// displayPath makes relative paths (the per-run layer) absolute, so it is clear which file it is.
+func displayPath(p string) string {
+	if abs, err := filepath.Abs(p); err == nil {
+		return abs
+	}
+	return p
 }
 
 // writeExample prints a configuration where every setting is commented out at its default.

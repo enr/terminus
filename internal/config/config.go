@@ -108,46 +108,120 @@ func UserPath() string {
 // Layers that don't exist are skipped, and the zero value applies when none exist. Explicit
 // --config bypasses this and loads a single file instead (see Load).
 func LoadHierarchy() (*Config, error) {
-	var paths []string
-	paths = append(paths, DefaultPath)
+	return loadHierarchy(HierarchyPaths())
+}
+
+// HierarchyPaths returns the layers LoadHierarchy considers, weakest first.
+func HierarchyPaths() []string {
+	paths := []string{DefaultPath}
 	if p := UserPath(); p != "" {
 		paths = append(paths, p)
 	}
-	paths = append(paths, LocalPath)
-	return loadHierarchy(paths)
+	return append(paths, LocalPath)
 }
 
 func loadHierarchy(paths []string) (*Config, error) {
-	var merged map[string]any
-	var loaded []string
+	m, err := Merge(paths)
+	if err != nil {
+		return nil, err
+	}
+	c := &Config{Enabled: map[string]bool{}}
+	loaded := m.Loaded()
+	if len(loaded) == 0 {
+		return c, nil
+	}
+	src, err := m.TOML()
+	if err != nil {
+		return nil, err
+	}
+	if err := c.parse(src); err != nil {
+		return nil, fmt.Errorf("%s: %w", strings.Join(loaded, ", "), err)
+	}
+	c.Path = strings.Join(loaded, ", ")
+	return c, nil
+}
+
+// Layer is a file considered while merging the configuration.
+type Layer struct {
+	Path  string
+	Found bool
+}
+
+// Merged is the result of merging configuration layers, before any validation.
+type Merged struct {
+	// Layers are the files considered, weakest first.
+	Layers []Layer
+	// Table is the merged configuration; empty when no layer was found.
+	Table map[string]any
+}
+
+// Merge reads the layers at paths, weakest first, and merges them (see LoadHierarchy). Missing
+// files are skipped; unreadable files and TOML syntax errors are errors. The result is not
+// validated: it is what terminus would decode.
+func Merge(paths []string) (*Merged, error) {
+	m := &Merged{Table: map[string]any{}}
 	for _, p := range paths {
 		data, err := os.ReadFile(p)
 		if errors.Is(err, os.ErrNotExist) {
+			m.Layers = append(m.Layers, Layer{Path: p})
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		var m map[string]any
-		if _, err := toml.Decode(string(data), &m); err != nil {
+		var t map[string]any
+		if _, err := toml.Decode(string(data), &t); err != nil {
 			return nil, fmt.Errorf("%s: %w", p, err)
 		}
-		merged = mergeTables(merged, m)
-		loaded = append(loaded, p)
+		m.Table = mergeTables(m.Table, t)
+		m.Layers = append(m.Layers, Layer{Path: p, Found: true})
 	}
-	c := &Config{Enabled: map[string]bool{}}
-	if len(loaded) == 0 {
-		return c, nil
+	return m, nil
+}
+
+// Loaded returns the paths of the layers that were found.
+func (m *Merged) Loaded() []string {
+	var paths []string
+	for _, l := range m.Layers {
+		if l.Found {
+			paths = append(paths, l.Path)
+		}
 	}
+	return paths
+}
+
+// TOML encodes the merged configuration, keys sorted, a blank line before each table.
+func (m *Merged) TOML() (string, error) {
 	var buf strings.Builder
-	if err := toml.NewEncoder(&buf).Encode(merged); err != nil {
-		return nil, fmt.Errorf("merging configuration: %w", err)
+	enc := toml.NewEncoder(&buf)
+	enc.Indent = ""
+	if err := enc.Encode(m.Table); err != nil {
+		return "", fmt.Errorf("merging configuration: %w", err)
 	}
-	if err := c.parse(buf.String()); err != nil {
-		return nil, fmt.Errorf("%s: %w", strings.Join(loaded, ", "), err)
+	// The encoder writes no multi-line strings, so a line starting with "[" is a table header.
+	// Headers of tables holding only subtables ("[modules]" before "[modules.http]") are noise.
+	// The encoder's own blank lines are inconsistent: they are dropped, and one is added before
+	// each table instead.
+	var lines []string
+	for _, l := range strings.SplitAfter(buf.String(), "\n") {
+		if l != "\n" && l != "" {
+			lines = append(lines, l)
+		}
 	}
-	c.Path = strings.Join(loaded, ", ")
-	return c, nil
+	isHeader := func(i int) bool { return i < len(lines) && strings.HasPrefix(lines[i], "[") }
+	var out strings.Builder
+	for i, l := range lines {
+		// An empty leaf table ("[modules.typo]") is kept: it still matters to validation.
+		if isHeader(i) && isHeader(i+1) &&
+			strings.HasPrefix(lines[i+1], strings.TrimSuffix(strings.TrimSpace(l), "]")+".") {
+			continue
+		}
+		if isHeader(i) && out.Len() > 0 {
+			out.WriteString("\n")
+		}
+		out.WriteString(l)
+	}
+	return out.String(), nil
 }
 
 // mergeTables merges src into dst, recursing into nested tables; any other value (including

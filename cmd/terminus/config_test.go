@@ -184,3 +184,22 @@ func TestUsersFlagAndSystemdConfig(t *testing.T) {
 		t.Fatalf("valid systemd/journal settings: %d %s %s", code, out, errOut)
 	}
 }
+
+func TestConfigShow(t *testing.T) {
+	// Shown as read: an invalid value is not an error here ("config validate" reports it).
+	cfg := writeConfig(t, "timeout = 5\n[modules.http]\nenabled = true\n")
+	code, out, errOut := runCLI(t, "--config", cfg, "config", "show")
+	if code != 0 {
+		t.Fatalf("code %d: %s", code, errOut)
+	}
+	want := "# Configuration files, weakest first:\n#   " + cfg + "  loaded\n\ntimeout = 5\n\n[modules.http]\nenabled = true\n"
+	if out != want {
+		t.Errorf("got:\n%s\nwant:\n%s", out, want)
+	}
+	if _, out, _ := runCLI(t, "--config", cfg, "--color", "always", "config", "show"); !strings.Contains(out, "\x1b[") {
+		t.Error("no highlighting with --color always")
+	}
+	if code, _, _ := runCLI(t, "--config", filepath.Join(t.TempDir(), "missing.toml"), "config", "show"); code == 0 {
+		t.Error("explicit missing config accepted")
+	}
+}
