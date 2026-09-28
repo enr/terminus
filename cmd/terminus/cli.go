@@ -115,7 +115,7 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 	pf.StringSliceVar(&g.only, "only", nil, "run only these modules")
 	pf.StringSliceVar(&g.enable, "modules", nil, "enable these modules too")
 	pf.StringSliceVar(&g.disable, "no-modules", nil, "disable these modules")
-	pf.StringSliceVar(&g.users, "users", nil, "users whose systemd user manager is inspected (default from the configuration: auto)")
+	pf.StringSliceVar(&g.users, "users", nil, "users inspected by systemd, podman, quadlet and timers (default from the configuration: auto)")
 
 	// Defined here to keep -v free: subcommands use it for --verbose.
 	root.Flags().Bool("version", false, "print the version")

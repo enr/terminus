@@ -111,7 +111,7 @@ func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
 		}
 	}
 	if changed("users") {
-		// The same users for every module that inspects users (systemd, podman, quadlet).
+		// The same users for every module that inspects users (systemd, podman, quadlet, timers).
 		for _, m := range reg.All() {
 			if s, ok := m.(interface{ SetUsers([]string) error }); ok {
 				if err := s.SetUsers(g.users); err != nil {
