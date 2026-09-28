@@ -64,6 +64,7 @@ Modules
 ```
 
 The exit code tells the outcome: `0` all good, `1` warnings, `2` failures, `3` terminus error.
+A module that could not be fully collected counts as a warning even when its findings look fine.
 `--problems` hides the findings that are fine, `-v` adds evidence and hints.
 
 The modules, their facts and their checks are described in [docs/modules.md](docs/modules.md).

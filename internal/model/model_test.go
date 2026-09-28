@@ -75,6 +75,34 @@ func TestExitCode(t *testing.T) {
 	}
 }
 
+func TestExitCodeModuleProblem(t *testing.T) {
+	cases := []struct {
+		name   string
+		status ModuleStatus
+		want   int
+	}{
+		{"ok", StatusOK, ExitOK},
+		{"skipped", StatusSkipped, ExitOK},
+		{"partial", StatusPartial, ExitWarn},
+		{"error", StatusError, ExitWarn},
+	}
+	for _, c := range cases {
+		r := NewReport()
+		r.Modules["m"] = ModuleResult{Name: "m", Status: c.status}
+		r.AddFindings(Finding{ID: "x", Severity: SeverityOK})
+		if got := r.ExitCode(); got != c.want {
+			t.Errorf("%s: exit code = %d, want %d", c.name, got, c.want)
+		}
+	}
+	// A fail finding still wins over a merely partial module.
+	r := NewReport()
+	r.Modules["m"] = ModuleResult{Name: "m", Status: StatusPartial}
+	r.AddFindings(Finding{ID: "x", Severity: SeverityFail})
+	if got := r.ExitCode(); got != ExitFail {
+		t.Errorf("exit code = %d, want %d", got, ExitFail)
+	}
+}
+
 func TestGrade(t *testing.T) {
 	if Grade(1, 2, 3) != SeverityOK || Grade(2, 2, 3) != SeverityWarn || Grade(5, 2, 3) != SeverityFail {
 		t.Error("Grade")
