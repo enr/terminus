@@ -157,7 +157,7 @@ func TestServeHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(newHandler(a, slog.New(slog.NewTextHandler(&logs, nil))))
+	srv := httptest.NewServer(newHandler(a, slog.New(slog.NewTextHandler(&logs, nil)), 0))
 	defer srv.Close()
 
 	res, err := http.Post(srv.URL+"/facts", "text/plain", strings.NewReader("System.Kernel.Name"))
@@ -188,6 +188,24 @@ func TestServeHandler(t *testing.T) {
 	}
 	if r.Modules["system"].Status != model.StatusOK || len(r.Findings) == 0 {
 		t.Fatalf("/report: %+v", r.Summary)
+	}
+
+	res, err = http.Get(srv.URL + "/facts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	readBody(t, res)
+	if res.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("GET /facts: %d, want 405", res.StatusCode)
+	}
+
+	res, err = http.Post(srv.URL+"/report", "text/plain", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readBody(t, res)
+	if res.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /report: %d, want 405", res.StatusCode)
 	}
 }
 

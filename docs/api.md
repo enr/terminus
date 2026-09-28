@@ -10,14 +10,18 @@ To enable the terminus HTTP API use `terminus serve --http` (the v1 form `termin
 $ terminus serve --http ":8080"
 ```
 
-The server runs the core modules on every request.
+A collection (every enabled module: external scripts, backups, TLS dials, ...) is reused for
+`--cache-ttl` (default 5s) across requests, so the server answers a burst of requests with one
+collection instead of one each; `--cache-ttl 0` collects on every request. There is no
+authentication: bind to a loopback or private address, or put the server behind a reverse proxy
+that authenticates the caller.
 
 ### Client
 
 #### Get all facts
 
 ```shell
-$ curl http://$SERVER_IP:8080/facts
+$ curl -X POST http://$SERVER_IP:8080/facts
 ```
 
 #### Get a single fact
