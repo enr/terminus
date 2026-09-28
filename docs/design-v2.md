@@ -56,7 +56,7 @@ Principi:
   tool usa il bus `/run/user/<uid>/bus` e il socket podman dell'utente, oppure esegue i comandi con
   `setpriv/runuser` + `XDG_RUNTIME_DIR` (sezione 0 del doc).
 - **Solo lettura di default**. I controlli attivi (sez. 11: stop del servizio per verificare la sonda)
-  solo dietro sottocomando esplicito `probe --disruptive` con conferma.
+  solo dietro sottocomando esplicito `probe` con conferma.
 - Fatti esterni (`facts.d`) mantenuti per compatibilità (`lib/facts/facts.go:34`), più "check esterni"
   che restituiscono findings in JSON.
 
@@ -248,9 +248,9 @@ terminus check                   # esegue collector necessari + regole; exit cod
 terminus check -o text|json|jsonl|markdown|html|prometheus
 terminus report                  # markdown/HTML "fotografia" completa (prima/dopo deploy, incidente)
 terminus diff a.json b.json      # confronto tra due snapshot (prima/dopo)
-terminus remote user@host check  # scp binario per arch → run → output locale; più host in parallelo
+terminus remote user@host       # copia binario per arch (cache) → report → output locale; più host in parallelo
 terminus serve --http :6060      # API esistente, mantenuta
-terminus probe --disruptive unit # sez. 11, esplicito
+terminus probe --unit U          # sez. 11, esplicito, con conferma
 ```
 
 ## Fasi di implementazione
@@ -264,7 +264,10 @@ terminus probe --disruptive unit # sez. 11, esplicito
 4. ✅ **systemd-units + cgroup + journald** e relativi check (valore più alto: sez. 3-5).
 5. ✅ **podman + quadlet + volumi** e check (sez. 2, 7-9).
 6. ✅ **network sockets, caddy (+tls), postgres, http**, `report`, `diff`, renderer markdown/html/jsonl/prometheus.
-7. **remote via ssh** (`x/crypto/ssh`, usa ssh-agent/known_hosts) e `probe`.
+7. ✅ **remote via ssh** e `probe`. Cambio rispetto al piano: `remote` usa il client `ssh` di sistema
+   invece di `x/crypto/ssh`, così `~/.ssh/config` (alias, ProxyJump, identità), l'agent e la verifica
+   di `known_hosts` valgono come per l'operatore senza reimplementarli; `probe` non ha `--disruptive`
+   ma chiede conferma (`--yes` obbligatorio senza terminale). Vedi `docs/remote.md` e `docs/probe.md`.
 8. Moduli del catalogo, uno alla volta, secondo priorità.
 
 ## Verifica

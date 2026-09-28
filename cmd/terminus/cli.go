@@ -125,6 +125,8 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 		newCheckCmd(g, stdout),
 		newReportCmd(g, stdout),
 		newDiffCmd(stdout),
+		newRemoteCmd(g, stdout),
+		newProbeCmd(g, stdout),
 		newServeCmd(g, stderr),
 		newModulesCmd(g, stdout, stderr),
 		newChecksCmd(g, stdout, stderr),
@@ -151,7 +153,8 @@ func normalizeLegacyArgs(args []string) []string {
 		}
 		out = append(out, a)
 	}
-	if serve && (len(out) == 0 || out[0] != "serve") {
+	// Only v1 command lines, which have no subcommand: "terminus probe --http URL" stays as is.
+	if serve && strings.HasPrefix(out[0], "-") {
 		out = append([]string{"serve"}, out...)
 	}
 	return out

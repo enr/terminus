@@ -28,6 +28,8 @@ type Cmd struct {
 	Args    []string
 	Env     []string      // added to the current environment
 	Timeout time.Duration // 0: DefaultTimeout; NoTimeout: only the context
+	// Stdin is the standard input of the command; nil means none.
+	Stdin io.Reader
 	// User runs the command as this user (name or numeric UID), with the environment of its
 	// session (HOME, XDG_RUNTIME_DIR, DBUS_SESSION_BUS_ADDRESS). Another user than the current
 	// one requires root.
@@ -95,6 +97,7 @@ func (Exec) run(ctx context.Context, c Cmd, stdout io.Writer, fn func([]byte) er
 	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdin = c.Stdin
 
 	var err error
 	if fn == nil {

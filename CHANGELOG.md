@@ -47,6 +47,11 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
 - Modules run in parallel with a per-module timeout (`--timeout`); a failing or hanging module
   is reported instead of stopping the run. `--only` selects the modules.
 - `terminus serve`: `POST /facts` as before, plus `GET /report`.
+- `terminus remote`: runs terminus on other machines through the system ssh client (the binary is
+  copied once per version and architecture), shows the reports together, saves them with
+  `--output-dir` for `terminus diff` (docs/remote.md).
+- `terminus probe`: stops a unit or a container on purpose to verify that the endpoint and the
+  monitoring notice the outage, and always starts it again (docs/probe.md).
 
 ### Changed
 - `terminus` without arguments prints the facts as text; use `terminus facts -o json` for JSON.

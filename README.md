@@ -21,6 +21,8 @@ terminus facts [path]     print the facts (all of them, or the value at path)
 terminus check            evaluate the facts
 terminus report           checks and facts in one document (markdown, html, json)
 terminus diff A.json B.json  what changed between two reports
+terminus remote HOST...   run terminus on other machines through ssh
+terminus probe            stop a service on purpose to verify that the monitoring notices
 terminus serve            serve facts and reports over HTTP
 terminus modules list     which modules run and why
 terminus modules detect   which optional modules fit this machine
@@ -65,6 +67,26 @@ The exit code tells the outcome: `0` all good, `1` warnings, `2` failures, `3` t
 `--problems` hides the findings that are fine, `-v` adds evidence and hints.
 
 The modules, their facts and their checks are described in [docs/modules.md](docs/modules.md).
+
+### Other machines
+
+```shell
+$ terminus remote --sudo srv-01 apps@web-02 -- --only systemd,podman,quadlet
+$ terminus remote --hosts-file hosts.txt --output-dir reports/
+```
+
+terminus copies itself to the hosts through ssh (once per version, `~/.ssh/config` and the agent
+apply) and brings the reports back: see [docs/remote.md](docs/remote.md).
+
+### Verify the monitoring
+
+```shell
+$ sudo terminus probe --unit myapp.service --user apps --http https://app.example.org/health \
+    --check-cmd 'grep -q "myapp.*DOWN" /var/log/easeprobe.log' --wait 60s
+```
+
+stops the service for a while, checks that the endpoint and the monitoring notice, and starts it
+again (also on Ctrl-C). The only command that changes the machine: see [docs/probe.md](docs/probe.md).
 
 ### Print a single fact
 

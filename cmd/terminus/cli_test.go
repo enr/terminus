@@ -52,6 +52,7 @@ func TestNormalizeLegacyArgs(t *testing.T) {
 		{[]string{"-external-facts-dir=/tmp/x", "-http", ":6060"}, []string{"serve", "--external-facts-dir=/tmp/x", "--http", ":6060"}},
 		{[]string{"serve", "--http=:6060"}, []string{"serve", "--http=:6060"}},
 		{[]string{"check", "-v"}, []string{"check", "-v"}},
+		{[]string{"probe", "--container", "web", "--http", "http://x/"}, []string{"probe", "--container", "web", "--http", "http://x/"}},
 	}
 	for _, c := range cases {
 		if got := normalizeLegacyArgs(c.in); !reflect.DeepEqual(got, c.want) {
