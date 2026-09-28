@@ -54,3 +54,37 @@ func TestDuplicateAndSkip(t *testing.T) {
 		t.Errorf("missing directory: %v", err)
 	}
 }
+
+func TestCollectFollowsSymlinksForClassification(t *testing.T) {
+	dir := t.TempDir()
+	// A symlink's own mode is always rwxrwxrwx: classifying it by DirEntry.Info() (which does
+	// not follow it) would try to execute a symlinked, non-executable JSON file.
+	write(t, dir, "real.json", `{"a":1}`, 0o644)
+	if err := os.Symlink(filepath.Join(dir, "real.json"), filepath.Join(dir, "linked.json")); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := New(dir).Collect(context.Background(), &module.Env{Runner: runner.Exec{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	facts := got.(map[string]any)
+	if facts["linked"] == nil || facts["linked"].(map[string]any)["a"] != float64(1) {
+		t.Fatalf("facts: %v", facts)
+	}
+}
+
+func TestCollectRejectsUntrustedPermissions(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "shared.json", `{"a":1}`, 0o644)
+	if err := os.Chmod(filepath.Join(dir, "shared.json"), 0o666); err != nil { // bypass umask
+		t.Fatal(err)
+	}
+	got, err := New(dir).Collect(context.Background(), &module.Env{Runner: runner.Exec{}})
+	if err == nil || !strings.Contains(err.Error(), "not trusted") {
+		t.Fatalf("group/world-writable fact accepted: %v", err)
+	}
+	if facts := got.(map[string]any); facts["shared"] != nil {
+		t.Errorf("group/world-writable fact was loaded: %v", facts)
+	}
+}

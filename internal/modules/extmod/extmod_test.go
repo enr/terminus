@@ -76,6 +76,52 @@ JSON
 	}
 }
 
+func TestLoadFollowsSymlinksForClassification(t *testing.T) {
+	dir := t.TempDir()
+	// A symlink's own mode is always rwxrwxrwx: classifying it by e.Info() (which does not
+	// follow it) would treat any symlink, including one to a non-executable file, as a module.
+	script(t, dir, "data.json", `{"a":1}`, 0o644)
+	if err := os.Symlink(filepath.Join(dir, "data.json"), filepath.Join(dir, "nonexec-link.json")); err != nil {
+		t.Fatal(err)
+	}
+	script(t, dir, "target.sh", "echo '{}'", 0o755)
+	if err := os.Symlink(filepath.Join(dir, "target.sh"), filepath.Join(dir, "exec-link.sh")); err != nil {
+		t.Fatal(err)
+	}
+
+	mods, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]bool{}
+	for _, m := range mods {
+		byName[m.Name()] = true
+	}
+	if byName["nonexec-link"] {
+		t.Error("a symlink to a non-executable file was treated as a module")
+	}
+	if !byName["exec-link"] {
+		t.Error("a symlink to an executable, trusted target was not treated as a module")
+	}
+}
+
+func TestLoadRejectsUntrustedPermissions(t *testing.T) {
+	dir := t.TempDir()
+	script(t, dir, "shared.sh", "echo '{}'", 0o755)
+	if err := os.Chmod(filepath.Join(dir, "shared.sh"), 0o777); err != nil { // bypass umask
+		t.Fatal(err)
+	}
+	mods, err := Load(dir)
+	if err == nil || !strings.Contains(err.Error(), "not trusted") {
+		t.Fatalf("group/world-writable module accepted: mods=%v err=%v", mods, err)
+	}
+	for _, m := range mods {
+		if m.Name() == "shared" {
+			t.Error("group/world-writable module was loaded")
+		}
+	}
+}
+
 func TestParseRejectsUnknownFieldsAndSeverities(t *testing.T) {
 	if _, err := parse("m", []byte(`{"facts": {}, "extra": 1}`)); err == nil {
 		t.Error("unknown field accepted")

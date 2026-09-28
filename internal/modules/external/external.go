@@ -15,6 +15,7 @@ import (
 
 	"github.com/enr/terminus/internal/module"
 	"github.com/enr/terminus/internal/runner"
+	"github.com/enr/terminus/internal/safeexec"
 )
 
 // Name of the module.
@@ -107,24 +108,36 @@ func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 		if strings.HasPrefix(name, ".") || e.IsDir() {
 			continue
 		}
-		info, err := e.Info()
+		path := filepath.Join(m.dir, name)
+		// os.Stat follows symlinks: what is classified and checked below is what actually runs
+		// or is read, not the symlink itself (always rwxrwxrwx, so e.Info(), which does not
+		// follow it, would see every symlink as executable).
+		info, err := os.Stat(path)
 		if err != nil {
 			add(name, nil, err)
 			continue
 		}
-		path := filepath.Join(m.dir, name)
-		switch {
-		case info.Mode()&0o111 != 0:
+		exec := info.Mode()&0o111 != 0
+		if !exec && !strings.HasSuffix(name, ".json") {
+			continue
+		}
+		// A custom fact, executable or not, is trusted input: a file only root or the terminus
+		// user could have placed there, and that no one else can write to or replace.
+		if err := safeexec.Check(path, m.dir); err != nil {
+			add(name, nil, fmt.Errorf("not trusted: %w", err))
+			continue
+		}
+		if exec {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				v, err := fromExec(ctx, r, path)
 				add(name, v, err)
 			}()
-		case strings.HasSuffix(name, ".json"):
-			v, err := fromFile(path)
-			add(name, v, err)
+			continue
 		}
+		v, err := fromFile(path)
+		add(name, v, err)
 	}
 	wg.Wait()
 	return facts, errors.Join(errs...)

@@ -10,6 +10,10 @@ A file that fails (invalid JSON, non-zero exit code, timeout) is reported in the
 the other facts are still collected. Query custom facts with their name (`terminus docker.ServerAPIVersion`)
 or through the module (`terminus external.docker.ServerAPIVersion`).
 
+Each file (and the directory itself) must be owned by root or by the user running terminus, and
+not writable by anyone else: a file placed there is trusted, executable or not, so terminus refuses
+one it cannot vouch for instead of running it, or reading it as a fact, and reports it as an error.
+
 ## Executable Facts
 
 Executable facts can be written in any language and reside under the external facts directory with the executable bit set.

@@ -27,6 +27,7 @@ import (
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/module"
 	"github.com/enr/terminus/internal/runner"
+	"github.com/enr/terminus/internal/safeexec"
 )
 
 // validName are the module names accepted from file names.
@@ -53,7 +54,11 @@ func Load(dir string) ([]*Module, error) {
 		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
-		info, err := e.Info()
+		path := filepath.Join(dir, e.Name())
+		// os.Stat follows symlinks: a symlinked file is classified (and later checked) by what
+		// it points to, not by its own mode (always rwxrwxrwx for a symlink, so e.Info(), which
+		// does not follow it, would see every symlink as executable).
+		info, err := os.Stat(path)
 		if err != nil || info.Mode()&0o111 == 0 {
 			continue
 		}
@@ -62,7 +67,11 @@ func Load(dir string) ([]*Module, error) {
 			errs = append(errs, fmt.Errorf("external module %s: name %q must match %s", e.Name(), name, validName))
 			continue
 		}
-		mods = append(mods, &Module{name: name, path: filepath.Join(dir, e.Name())})
+		if err := safeexec.Check(path, dir); err != nil {
+			errs = append(errs, fmt.Errorf("external module %s: not trusted: %w", e.Name(), err))
+			continue
+		}
+		mods = append(mods, &Module{name: name, path: path})
 	}
 	return mods, errors.Join(errs...)
 }
