@@ -298,3 +298,35 @@ Only implicit TLS is supported on endpoints (443, 465, 993, 995, ...), not START
 | `tls.chain` | chain not verified: fail for endpoints (clients reject it: incomplete chain, self-signed), info for files (private CA, or intermediates stored elsewhere) |
 | `tls.hostname` | fail: the endpoint certificate does not cover `server_name`; warn: certificate without subject alternative names |
 | `tls.endpoint` | fail: no TLS connection |
+
+## backup
+
+The latest backup of each configured repository: a snapshot with
+`restic snapshots --json --latest 1`, an archive with `borg list --json --last 1 --bypass-lock`,
+a backup with `pgbackrest info --output=json`; its age, size when the tool reports it, and the
+state of the systemd unit that makes the backups. Nothing is written to the repositories (no
+locks either). Repositories are read in parallel; remote ones may need a longer `--timeout`.
+
+```toml
+[modules.backup]
+enabled = true
+
+[[modules.backup.repositories]]
+name = "home"
+type = "restic"                     # restic, borg, pgbackrest
+repository = "sftp:backup@nas:/srv/restic"   # pgbackrest: the stanza
+password_file = "/etc/restic/password"       # restic and borg
+env_file = "/etc/restic/env"        # KEY=value lines for the tool: S3/B2 credentials, BORG_RSH, ...
+host = ""                           # restic: only the snapshots of this host (shared repositories)
+user = ""                           # run the tool as this user (root only; pgbackrest: postgres)
+unit = "restic-backup.service"      # systemd unit that makes the backups
+max_age = "26h"                     # warn after max_age, fail after twice; default backup.age
+```
+
+Borg never prompts: a repository moved or unencrypted and never seen before is an error.
+
+| Check | Rule |
+|---|---|
+| `backup.age` | hours since the latest backup: warn ≥ 26, fail ≥ 50 (or `max_age` and twice it); warn at least when pgBackRest marks it as ended with an error |
+| `backup.repository` | fail: the repository cannot be read (the last line of the tool error is reported), or it holds no backup |
+| `backup.job` | fail: the last run of `unit` failed |

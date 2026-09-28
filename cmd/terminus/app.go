@@ -11,6 +11,7 @@ import (
 	"github.com/enr/terminus/internal/engine"
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/modules/backup"
 	"github.com/enr/terminus/internal/modules/caddy"
 	"github.com/enr/terminus/internal/modules/cpu"
 	"github.com/enr/terminus/internal/modules/external"
@@ -55,6 +56,7 @@ func builtinModules(externalFactsDir string) []module.Module {
 		caddy.New(),
 		postgres.New(),
 		tlscerts.New(),
+		backup.New(),
 	}
 }
 
