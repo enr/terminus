@@ -1,0 +1,13 @@
+srv-01 · 2026-09-28T10:00:00Z · 123ms
+✖ 1 fail  ⚠ 1 warn  ℹ 0 info  ✔ 1 ok
+
+Findings
+  ✖ fail  unit.failed        unit is failed [backup.service]
+  ⚠ warn  mem.available-low  only 7.3% of memory available [memory]
+  ✔ ok    disk.usage         42% used [/]
+
+Modules
+  external  skipped  directory /etc/terminus/facts.d does not exist
+  podman    partial  1.5s
+            ↳ volume inspect: permission denied
+  system    ok       12ms

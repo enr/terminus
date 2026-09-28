@@ -1,4 +1,4 @@
-// +build linux
+//go:build linux
 
 package facts
 
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -34,13 +35,23 @@ func (f *SystemFacts) getSysInfo(wg *sync.WaitGroup) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	f.Memory.Total = info.Totalram
-	f.Memory.Free = info.Freeram
-	f.Memory.Shared = info.Sharedram
-	f.Memory.Buffered = info.Bufferram
+	// sysinfo reports memory in multiples of Unit bytes.
+	unit := uint64(info.Unit)
+	if unit == 0 {
+		unit = 1
+	}
+	f.Memory.Total = uint64(info.Totalram) * unit
+	f.Memory.Free = uint64(info.Freeram) * unit
+	f.Memory.Shared = uint64(info.Sharedram) * unit
+	f.Memory.Buffered = uint64(info.Bufferram) * unit
+	if available, err := memAvailable("/proc/meminfo"); err == nil {
+		f.Memory.Available = available
+	} else if c.Debug {
+		log.Println(err.Error())
+	}
 
-	f.Swap.Total = info.Totalswap
-	f.Swap.Free = info.Freeswap
+	f.Swap.Total = uint64(info.Totalswap) * unit
+	f.Swap.Free = uint64(info.Freeswap) * unit
 
 	f.Uptime = info.Uptime
 
@@ -49,6 +60,31 @@ func (f *SystemFacts) getSysInfo(wg *sync.WaitGroup) {
 	f.LoadAverage.Ten = fmt.Sprintf("%.2f", float64(info.Loads[2])/linuxSysinfoLoadsScale)
 
 	return
+}
+
+// memAvailable returns the MemAvailable value of /proc/meminfo, in bytes: the memory that can be
+// used by new workloads without swapping, page cache included.
+func memAvailable(path string) (uint64, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) >= 2 && fields[0] == "MemAvailable:" {
+			kb, err := strconv.ParseUint(fields[1], 10, 64)
+			if err != nil {
+				return 0, err
+			}
+			return kb * 1024, nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+	return 0, fmt.Errorf("MemAvailable not found in %s", path)
 }
 
 func (f *SystemFacts) getOSRelease(wg *sync.WaitGroup) {

@@ -1,0 +1,19 @@
+srv-01 · 2026-09-28T10:00:00Z · 123ms
+
+Modules
+  external  skipped  directory /etc/terminus/facts.d does not exist
+  podman    partial  1.5s
+            ↳ volume inspect: permission denied
+  system    ok       12ms
+
+Facts
+  podman: {}
+  system:
+    Disks:
+      [0]
+        Device: sda
+    Flags: [fpu, sse]
+    Hostname: srv-01
+    Memory:
+      Available: 300
+      Total: 4096

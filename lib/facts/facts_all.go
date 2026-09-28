@@ -101,10 +101,11 @@ type Kernel struct {
 
 // Memory holds the memory facts.
 type Memory struct {
-	Total    uint64
-	Free     uint64
-	Shared   uint64
-	Buffered uint64
+	Total     uint64
+	Free      uint64
+	Available uint64
+	Shared    uint64
+	Buffered  uint64
 }
 
 // Network holds the network facts.
@@ -192,16 +193,21 @@ type Processor struct {
 	BogoMips  float64
 }
 
-// GetFacts returns system facts
-func GetFacts(cfg config.Config) *Facts {
+// Configure sets the package configuration. It must be called once, before any collection starts.
+func Configure(cfg config.Config) {
 	c = cfg
+}
+
+// System returns the built-in system facts.
+func System() *SystemFacts {
+	return getSystemFacts()
+}
+
+// External returns the facts loaded from the external facts directory, keyed by fact name.
+func External() map[string]interface{} {
 	f := New()
-	if c.Path == "" || (c.Path != "" && strings.Contains(c.Path, "System")) {
-		systemFacts := getSystemFacts()
-		f.add("System", systemFacts)
-	}
 	processExternalFacts(c, f)
-	return f
+	return f.Facts
 }
 
 func getSystemFacts() *SystemFacts {

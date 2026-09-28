@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "tool": "terminus",
+    "version": "0.2.0-test",
+    "hostname": "srv-01",
+    "timestamp": "2026-09-28T10:00:00Z",
+    "duration_ms": 123
+  },
+  "modules": {
+    "external": {
+      "name": "external",
+      "status": "skipped",
+      "skip_reason": "directory /etc/terminus/facts.d does not exist",
+      "duration_ms": 0
+    },
+    "podman": {
+      "name": "podman",
+      "status": "partial",
+      "facts": {},
+      "errors": [
+        "volume inspect: permission denied"
+      ],
+      "duration_ms": 1500
+    },
+    "system": {
+      "name": "system",
+      "status": "ok",
+      "facts": {
+        "Disks": [
+          {
+            "Device": "sda"
+          }
+        ],
+        "Flags": [
+          "fpu",
+          "sse"
+        ],
+        "Hostname": "srv-01",
+        "Memory": {
+          "Available": 300,
+          "Total": 4096
+        }
+      },
+      "duration_ms": 12
+    }
+  },
+  "findings": [
+    {
+      "id": "unit.failed",
+      "module": "systemd",
+      "severity": "fail",
+      "subject": "backup.service",
+      "message": "unit is failed"
+    },
+    {
+      "id": "mem.available-low",
+      "module": "system",
+      "severity": "warn",
+      "subject": "memory",
+      "message": "only 7.3% of memory available",
+      "evidence": {
+        "available_bytes": 314572800,
+        "available_ratio": 0.0732
+      },
+      "hint": "check memory usage"
+    },
+    {
+      "id": "disk.usage",
+      "module": "system",
+      "severity": "ok",
+      "subject": "/",
+      "message": "42% used"
+    }
+  ],
+  "summary": {
+    "ok": 1,
+    "info": 0,
+    "warn": 1,
+    "fail": 1
+  }
+}
