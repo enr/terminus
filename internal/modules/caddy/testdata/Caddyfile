@@ -1,0 +1,28 @@
+{
+	admin localhost:2019
+	local_certs
+}
+
+app.example.test {
+	handle /api/* {
+		reverse_proxy 127.0.0.1:18081
+	}
+	handle {
+		reverse_proxy 127.0.0.1:18082 127.0.0.1:18083
+	}
+}
+
+www.example.test, example.test {
+	root * /srv/www
+	file_server
+}
+
+legacy.example.test {
+	route {
+		reverse_proxy localhost:18084
+	}
+}
+
+:8080 {
+	respond "ok"
+}

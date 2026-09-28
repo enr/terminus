@@ -44,6 +44,7 @@ func sampleReport() *model.Report {
 			Evidence: map[string]any{"available_bytes": uint64(300 << 20), "available_ratio": 0.0732}},
 		model.Finding{ID: "unit.failed", Module: "systemd", Severity: model.SeverityFail, Subject: "backup.service", Message: "unit is failed"},
 		model.Finding{ID: "disk.usage", Module: "system", Severity: model.SeverityOK, Subject: "/", Message: "42% used"},
+		model.Finding{ID: "ext.escape", Module: "ext", Severity: model.SeverityInfo, Subject: `a|b <x> "q" \ z`, Message: "line1\nline2 <b>&</b>"},
 	)
 	return r
 }
@@ -83,6 +84,11 @@ func TestGolden(t *testing.T) {
 	golden(t, "report.txt", render(t, "text", Options{Findings: true}))
 	golden(t, "report-verbose-facts.txt", render(t, "text", Options{Findings: true, Verbose: true, Facts: true}))
 	golden(t, "facts.txt", render(t, "text", Options{Facts: true}))
+	golden(t, "report.md", render(t, "markdown", Options{Findings: true, Facts: true}))
+	golden(t, "report.html", render(t, "html", Options{Findings: true, Facts: true}))
+	golden(t, "report.jsonl", render(t, "jsonl", Options{Findings: true}))
+	golden(t, "report.prom", render(t, "prometheus", Options{Findings: true}))
+	golden(t, "report-problems.jsonl", render(t, "jsonl", Options{Findings: true, ProblemsOnly: true}))
 	golden(t, "report-problems.txt", render(t, "text", Options{Findings: true, ProblemsOnly: true}))
 }
 
@@ -98,7 +104,7 @@ func TestTextColor(t *testing.T) {
 }
 
 func TestForFormat(t *testing.T) {
-	if _, err := ForFormat("yaml"); err == nil || !strings.Contains(err.Error(), "text, json") {
+	if _, err := ForFormat("yaml"); err == nil || !strings.Contains(err.Error(), "text, json, jsonl, markdown, html, prometheus") {
 		t.Fatalf("err = %v", err)
 	}
 }

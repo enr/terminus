@@ -36,6 +36,11 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   quadlet.unit-not-loaded, quadlet.unit-never-active, quadlet.changed-since-start,
   quadlet.volume-owner.
 - `--users` applies to systemd, podman and quadlet.
+- Optional `caddy` module: domains served, upstreams, served certificates, DNS of the domains.
+- Optional `postgres` module: connections by client, settings, sizes, stuck transactions.
+- `public_ports` in `[modules.network]`: unexpected public ports become warnings.
+- Output formats `jsonl`, `markdown`, `html`, `prometheus`; `--output-file` writes atomically.
+- `terminus report` (checks and facts in one document) and `terminus diff` (compare two reports).
 - Commands run as another user (root only) with the session environment of that user.
 - Output formats: `text` for humans (colors only on a terminal, `--color`, `NO_COLOR`) and
   `json` with a versioned schema (`schema_version`), per-module status, errors and timings.

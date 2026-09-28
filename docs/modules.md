@@ -71,7 +71,7 @@ LISTEN, bound UDP) with the owning process. Processes of other users are visible
 |---|---|
 | `net.default-route` | warn without a default route |
 | `net.dns` | fail without DNS servers |
-| `net.public-listeners` | info: TCP ports listening on all addresses |
+| `net.public-listeners` | info: TCP ports listening on all addresses; with `public_ports = [22, 80, 443]` the other ports are warnings |
 
 ## systemd
 
@@ -122,6 +122,57 @@ The module is skipped when systemd is not the init system (containers).
 Skipped when the directory does not exist.
 
 # Optional modules
+
+## caddy
+
+The configuration of Caddy, read from the admin API (`GET /config/`, also on a unix socket) or,
+when the admin API is off, adapted from the Caddyfile with `caddy adapt` (locally or with
+`podman exec` in the container where Caddy runs): servers, sites with their domains (also in
+nested routes), handlers, reverse proxy upstreams, certificate issuers. Then each upstream is
+dialed, the certificate Caddy serves for each domain is read connecting to Caddy itself with the
+domain as SNI (no dependency on DNS), and each domain is resolved.
+
+```toml
+[modules.caddy]
+enabled = true
+admin = "http://localhost:2019"     # "unix//run/caddy/admin.sock", "" to skip
+caddyfile = "/etc/caddy/Caddyfile"
+container = ""                      # podman container running Caddy
+user = ""                           # its rootless owner
+tls_address = ""                    # default 127.0.0.1:443
+public_ips = []                     # public IPs not on the interfaces (NAT)
+```
+
+| Check | Rule |
+|---|---|
+| `caddy.upstream` | fail: an upstream does not accept connections (the sites it serves are listed) |
+| `caddy.tls-expiry` | days to expiry: warn < 14, fail < 7; short-lived certificates (internal CA, 6-day ACME) by share of lifetime: warn under 1/6, fail when expired |
+| `caddy.dns` | warn: a domain does not resolve, or not to this machine (disable it behind a proxy/CDN) |
+
+## postgres
+
+PostgreSQL instances, through the Go driver (no psql needed on the host): version, settings in
+effect (memory ones in bytes), sessions grouped by application, client address, state and
+backend type, client connections over the usable ones, oldest transaction, longest idle in
+transaction, database sizes. A role in `pg_monitor` sees every session:
+`CREATE ROLE monitor LOGIN PASSWORD '...' IN ROLE pg_monitor;`.
+
+```toml
+[modules.postgres]
+enabled = true
+dsn = "postgres://monitor@127.0.0.1:5432/postgres?sslmode=disable"
+password_file = "/etc/terminus/pg.pass"   # or PGPASSWORD, ~/.pgpass
+
+[[modules.postgres.instances]]            # more instances
+name = "app"
+dsn = "postgres://monitor@127.0.0.1:5433/app"
+```
+
+| Check | Rule |
+|---|---|
+| `pg.reachable` | fail: cannot connect |
+| `pg.connections` | client connections over max_connections minus the reserved ones: warn ≥ 0.8, fail ≥ 0.95; the top clients are in the evidence |
+| `pg.idle-in-transaction` | longest session idle in a transaction: warn ≥ 300 s, fail ≥ 3600 s |
 
 ## podman
 

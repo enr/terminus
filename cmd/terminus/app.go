@@ -11,6 +11,7 @@ import (
 	"github.com/enr/terminus/internal/engine"
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/modules/caddy"
 	"github.com/enr/terminus/internal/modules/cpu"
 	"github.com/enr/terminus/internal/modules/external"
 	"github.com/enr/terminus/internal/modules/extmod"
@@ -19,6 +20,7 @@ import (
 	"github.com/enr/terminus/internal/modules/memory"
 	"github.com/enr/terminus/internal/modules/network"
 	"github.com/enr/terminus/internal/modules/podman"
+	"github.com/enr/terminus/internal/modules/postgres"
 	"github.com/enr/terminus/internal/modules/quadlet"
 	"github.com/enr/terminus/internal/modules/storage"
 	"github.com/enr/terminus/internal/modules/system"
@@ -49,6 +51,8 @@ func builtinModules(externalFactsDir string) []module.Module {
 		journal.New(),
 		podman.New(),
 		quadlet.New(),
+		caddy.New(),
+		postgres.New(),
 	}
 }
 

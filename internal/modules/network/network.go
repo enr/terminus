@@ -5,6 +5,7 @@ package network
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"sort"
 	"strconv"
@@ -81,6 +82,35 @@ type Module struct {
 	fs         hostfs.FS
 	interfaces func() ([]net.Interface, error)
 	addrs      func(net.Interface) ([]net.Addr, error)
+	// publicPorts are the TCP ports expected to listen on all addresses; nil when not configured.
+	publicPorts map[int]bool
+}
+
+// ConfigExample implements module.Configurable.
+func (*Module) ConfigExample() string {
+	return `# TCP ports expected to listen on all addresses: the others are reported as warnings.
+# Not set: every such port is only listed (info).
+# public_ports = [22, 80, 443]`
+}
+
+// Configure implements module.Configurable.
+func (m *Module) Configure(decode module.Decoder) error {
+	var c struct {
+		PublicPorts *[]int `toml:"public_ports"`
+	}
+	if err := decode(&c); err != nil {
+		return err
+	}
+	if c.PublicPorts != nil {
+		m.publicPorts = map[int]bool{}
+		for _, p := range *c.PublicPorts {
+			if p < 1 || p > 65535 {
+				return fmt.Errorf("modules.network.public_ports: invalid port %d", p)
+			}
+			m.publicPorts[p] = true
+		}
+	}
+	return nil
 }
 
 // New returns the network module reading the running machine.

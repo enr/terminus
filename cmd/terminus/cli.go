@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -122,6 +123,8 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 	root.AddCommand(
 		newFactsCmd(g, stdout, stderr),
 		newCheckCmd(g, stdout),
+		newReportCmd(g, stdout),
+		newDiffCmd(stdout),
 		newServeCmd(g, stderr),
 		newModulesCmd(g, stdout, stderr),
 		newChecksCmd(g, stdout, stderr),
@@ -195,6 +198,7 @@ func renderOptions(g *globalOptions, stdout io.Writer) (output.Options, error) {
 
 type factsOptions struct {
 	output     string
+	outputFile string
 	verbose    bool
 	format     string
 	formatFile string
@@ -202,7 +206,8 @@ type factsOptions struct {
 
 func addFactsFlags(cmd *cobra.Command, fo *factsOptions) {
 	f := cmd.Flags()
-	f.StringVarP(&fo.output, "output", "o", "text", "output format: text, json")
+	f.StringVarP(&fo.output, "output", "o", "text", "output format: "+strings.Join(output.Formats, ", "))
+	f.StringVar(&fo.outputFile, "output-file", "", "write to this file (atomically) instead of the standard output")
 	f.BoolVarP(&fo.verbose, "verbose", "v", false, "show long lists and tables in full (text output)")
 	f.StringVar(&fo.format, "format", "", "format the facts with the given Go template")
 	f.StringVar(&fo.formatFile, "format-file", "", "format the facts with the Go template in the given file")
@@ -268,7 +273,10 @@ func runFacts(ctx context.Context, g *globalOptions, fo *factsOptions, args []st
 		return err
 	}
 	o.Facts, o.Verbose = true, fo.verbose
-	return renderer.Render(stdout, r, o)
+	if fo.outputFile != "" {
+		o.Color = false
+	}
+	return writeOutput(fo.outputFile, stdout, func(w io.Writer) error { return renderer.Render(w, r, o) })
 }
 
 // templateData is what templates see: facts keyed by module name, plus the names used by
@@ -305,9 +313,11 @@ func executeTemplate(fo *factsOptions, r *model.Report, stdout io.Writer) error 
 }
 
 type checkOptions struct {
-	output   string
-	verbose  bool
-	problems bool
+	output     string
+	outputFile string
+	verbose    bool
+	problems   bool
+	facts      bool
 }
 
 func newCheckCmd(g *globalOptions, stdout io.Writer) *cobra.Command {
@@ -320,38 +330,97 @@ func newCheckCmd(g *globalOptions, stdout io.Writer) *cobra.Command {
 Exit code: 0 all good, 1 warnings, 2 failures, 3 terminus error.`,
 		Example: `  terminus check
   terminus check -v --problems
-  terminus check -o json | jq .summary`,
+  terminus check -o json | jq .summary
+  terminus check -o prometheus --output-file /var/lib/node_exporter/textfile/terminus.prom`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			renderer, err := output.ForFormat(co.output)
-			if err != nil {
-				return err
-			}
-			a, err := newApp(g, cmd.ErrOrStderr())
-			if err != nil {
-				return err
-			}
-			r, err := a.collect(cmd.Context(), true)
-			if err != nil {
-				return err
-			}
-			o, err := renderOptions(g, stdout)
-			if err != nil {
-				return err
-			}
-			o.Findings, o.Verbose, o.ProblemsOnly = true, co.verbose, co.problems
-			if err := renderer.Render(stdout, r, o); err != nil {
-				return err
-			}
-			if code := r.ExitCode(); code != model.ExitOK {
-				return &exitError{code: code}
-			}
-			return nil
+			return runCheck(cmd, g, co, stdout)
 		},
 	}
-	f := cmd.Flags()
-	f.StringVarP(&co.output, "output", "o", "text", "output format: text, json")
-	f.BoolVarP(&co.verbose, "verbose", "v", false, "show evidence and hints of the findings")
-	f.BoolVar(&co.problems, "problems", false, "show only warn and fail findings")
+	addCheckFlags(cmd, co, "text")
 	return cmd
+}
+
+func newReportCmd(g *globalOptions, stdout io.Writer) *cobra.Command {
+	co := &checkOptions{facts: true}
+	cmd := &cobra.Command{
+		Use:   "report",
+		Short: "Write a complete report: checks and facts",
+		Long: `Write a complete report of the machine: summary, findings, modules and facts.
+
+A snapshot to keep before and after a deploy or during an incident; save it as JSON to compare
+two snapshots with "terminus diff". The exit code is the one of "terminus check".`,
+		Example: `  terminus report > srv-01.md
+  terminus report -o html --output-file /tmp/srv-01.html
+  terminus report -o json --output-file before.json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runCheck(cmd, g, co, stdout)
+		},
+	}
+	addCheckFlags(cmd, co, "markdown")
+	return cmd
+}
+
+func addCheckFlags(cmd *cobra.Command, co *checkOptions, defaultFormat string) {
+	f := cmd.Flags()
+	f.StringVarP(&co.output, "output", "o", defaultFormat, "output format: "+strings.Join(output.Formats, ", "))
+	f.StringVar(&co.outputFile, "output-file", "", "write to this file (atomically) instead of the standard output")
+	f.BoolVarP(&co.verbose, "verbose", "v", false, "show evidence and hints of the findings (text output)")
+	f.BoolVar(&co.problems, "problems", false, "show only warn and fail findings")
+}
+
+func runCheck(cmd *cobra.Command, g *globalOptions, co *checkOptions, stdout io.Writer) error {
+	renderer, err := output.ForFormat(co.output)
+	if err != nil {
+		return err
+	}
+	a, err := newApp(g, cmd.ErrOrStderr())
+	if err != nil {
+		return err
+	}
+	r, err := a.collect(cmd.Context(), true)
+	if err != nil {
+		return err
+	}
+	o, err := renderOptions(g, stdout)
+	if err != nil {
+		return err
+	}
+	if co.outputFile != "" {
+		o.Color = false
+	}
+	o.Findings, o.Verbose, o.ProblemsOnly, o.Facts = true, co.verbose, co.problems, co.facts
+	if err := writeOutput(co.outputFile, stdout, func(w io.Writer) error { return renderer.Render(w, r, o) }); err != nil {
+		return err
+	}
+	if code := r.ExitCode(); code != model.ExitOK {
+		return &exitError{code: code}
+	}
+	return nil
+}
+
+// writeOutput writes to stdout, or to path through a temporary file renamed at the end: readers
+// (node_exporter, a browser) never see a half-written file.
+func writeOutput(path string, stdout io.Writer, write func(io.Writer) error) error {
+	if path == "" {
+		return write(stdout)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name()) // no-op after the rename
+	if err := write(tmp); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }

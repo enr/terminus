@@ -33,7 +33,7 @@ type Renderer interface {
 }
 
 // Formats lists the supported output formats.
-var Formats = []string{"text", "json"}
+var Formats = []string{"text", "json", "jsonl", "markdown", "html", "prometheus"}
 
 // ForFormat returns the renderer of a format.
 func ForFormat(format string) (Renderer, error) {
@@ -42,9 +42,31 @@ func ForFormat(format string) (Renderer, error) {
 		return Text{}, nil
 	case "json":
 		return JSON{}, nil
+	case "jsonl":
+		return JSONL{}, nil
+	case "markdown", "md":
+		return Markdown{}, nil
+	case "html":
+		return HTML{}, nil
+	case "prometheus":
+		return Prometheus{}, nil
 	default:
 		return nil, fmt.Errorf("unknown output format %q (supported: %s)", format, strings.Join(Formats, ", "))
 	}
+}
+
+// shownFindings applies ProblemsOnly.
+func shownFindings(r *model.Report, o Options) []model.Finding {
+	if !o.ProblemsOnly {
+		return r.Findings
+	}
+	var out []model.Finding
+	for _, f := range r.Findings {
+		if f.Severity >= model.SeverityWarn {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // ColorMode is the value of the --color flag.

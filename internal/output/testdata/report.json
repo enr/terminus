@@ -82,6 +82,13 @@
       "hint": "check memory usage"
     },
     {
+      "id": "ext.escape",
+      "module": "ext",
+      "severity": "info",
+      "subject": "a|b \u003cx\u003e \"q\" \\ z",
+      "message": "line1\nline2 \u003cb\u003e\u0026\u003c/b\u003e"
+    },
+    {
       "id": "disk.usage",
       "module": "system",
       "severity": "ok",
@@ -91,7 +98,7 @@
   ],
   "summary": {
     "ok": 1,
-    "info": 0,
+    "info": 1,
     "warn": 1,
     "fail": 1
   }

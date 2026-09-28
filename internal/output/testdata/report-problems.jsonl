@@ -1,0 +1,2 @@
+{"timestamp":"2026-09-28T10:00:00Z","host":"srv-01","module":"systemd","id":"unit.failed","severity":"fail","subject":"backup.service","message":"unit is failed"}
+{"timestamp":"2026-09-28T10:00:00Z","host":"srv-01","module":"system","id":"mem.available-low","severity":"warn","subject":"memory","message":"only 7.3% of memory available","hint":"check memory usage","evidence":{"available_bytes":314572800,"available_ratio":0.0732}}

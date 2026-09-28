@@ -19,6 +19,8 @@ $ sudo install terminus-*_linux_amd64/terminus /usr/local/bin/
 ```
 terminus facts [path]     print the facts (all of them, or the value at path)
 terminus check            evaluate the facts
+terminus report           checks and facts in one document (markdown, html, json)
+terminus diff A.json B.json  what changed between two reports
 terminus serve            serve facts and reports over HTTP
 terminus modules list     which modules run and why
 terminus modules detect   which optional modules fit this machine
@@ -30,7 +32,7 @@ terminus version
 
 Facts and checks are grouped in modules: the core ones (`system`, `cpu`, `memory`, `storage`,
 `network`, `systemd`, `external` for custom facts) run by default, optional ones (`http`,
-`journal`, `podman`, `quadlet`) are enabled in
+`journal`, `podman`, `quadlet`, `caddy`, `postgres`) are enabled in
 [`/etc/terminus/terminus.toml`](docs/configuration.md), and [external modules](docs/configuration.md#external-modules)
 are executables dropped in `/etc/terminus/modules.d`. `--only memory,storage` runs just some.
 Terminus also supports [custom facts](docs/custom-facts.md) and a [HTTP API](docs/api.md).
@@ -83,6 +85,9 @@ Machine ID is bab60d34057d4ed7a7f3699ee4d15d26
 ```
 
 ### Output formats
+
+Also `jsonl`, `markdown`, `html` and `prometheus`: see [docs/output.md](docs/output.md).
+
 
 `-o text` (default) is meant for people: colors are used only on a terminal and can be controlled
 with `--color auto|always|never` or `NO_COLOR`.

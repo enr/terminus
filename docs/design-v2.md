@@ -263,7 +263,7 @@ terminus probe --disruptive unit # sez. 11, esplicito
 3. ✅ **Sistema moduli**: registry, terminus.toml, `modules list/detect`, flag enable/disable, moduli esterni.
 4. ✅ **systemd-units + cgroup + journald** e relativi check (valore più alto: sez. 3-5).
 5. ✅ **podman + quadlet + volumi** e check (sez. 2, 7-9).
-6. **network sockets, caddy (+tls), postgres, http**, `report`, `diff`, renderer markdown/html/jsonl/prometheus.
+6. ✅ **network sockets, caddy (+tls), postgres, http**, `report`, `diff`, renderer markdown/html/jsonl/prometheus.
 7. **remote via ssh** (`x/crypto/ssh`, usa ssh-agent/known_hosts) e `probe`.
 8. Moduli del catalogo, uno alla volta, secondo priorità.
 

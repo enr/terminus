@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/hostfs/hostfstest"
 	"github.com/enr/terminus/internal/model"
 )
@@ -167,5 +168,44 @@ func TestCollectLive(t *testing.T) {
 	f := got.(*Facts)
 	if len(f.Interfaces) == 0 {
 		t.Fatal("no interfaces on the live machine")
+	}
+}
+
+func TestPublicPorts(t *testing.T) {
+	f := &Facts{Listeners: []Listener{
+		{Protocol: "tcp", Port: 22, Scope: "any", Process: "sshd"},
+		{Protocol: "tcp", Port: 22, Scope: "any", Family: "inet6"},
+		{Protocol: "tcp", Port: 5432, Scope: "any", Process: "rootlessport"},
+		{Protocol: "tcp", Port: 6379, Scope: "loopback"},
+	}}
+	m := New()
+	c, _ := config.Parse("[modules.network]\npublic_ports = [22, 443]\n")
+	if err := m.Configure(c.Decoder(Name)); err != nil {
+		t.Fatal(err)
+	}
+	var got model.Finding
+	for _, x := range m.Check(nil, f) {
+		if x.ID == "net.public-listeners" {
+			got = x
+		}
+	}
+	if got.Severity != model.SeverityWarn || !strings.Contains(got.Message, "5432 (rootlessport)") || strings.Contains(got.Message, "22 ") {
+		t.Errorf("unexpected ports: %+v", got)
+	}
+	c, _ = config.Parse("[modules.network]\npublic_ports = [22, 5432]\n")
+	m.Configure(c.Decoder(Name))
+	for _, x := range m.Check(nil, f) {
+		if x.ID == "net.public-listeners" && x.Severity != model.SeverityOK {
+			t.Errorf("expected ports: %+v", x)
+		}
+	}
+	c, _ = config.Parse("[modules.network]\npublic_ports = [0]\n")
+	if err := New().Configure(c.Decoder(Name)); err == nil {
+		t.Error("port 0 accepted")
+	}
+	for _, x := range New().Check(nil, f) {
+		if x.ID == "net.public-listeners" && x.Severity != model.SeverityInfo {
+			t.Errorf("without public_ports: %+v", x)
+		}
 	}
 }
