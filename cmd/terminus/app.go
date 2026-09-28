@@ -25,6 +25,7 @@ import (
 	"github.com/enr/terminus/internal/modules/storage"
 	"github.com/enr/terminus/internal/modules/system"
 	"github.com/enr/terminus/internal/modules/systemd"
+	"github.com/enr/terminus/internal/modules/tlscerts"
 	"github.com/enr/terminus/internal/runner"
 )
 
@@ -53,6 +54,7 @@ func builtinModules(externalFactsDir string) []module.Module {
 		quadlet.New(),
 		caddy.New(),
 		postgres.New(),
+		tlscerts.New(),
 	}
 }
 

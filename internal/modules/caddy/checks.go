@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/enr/terminus/internal/certs"
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/module"
 )
@@ -47,25 +48,10 @@ func serverCertificate(ctx context.Context, addr, domain string, now time.Time) 
 	return c
 }
 
-// shortLived are certificates graded on the share of their lifetime left instead of days: the
-// Caddy internal CA (12 hours) and the short-lived ACME certificates (6 days).
-const shortLived = 30 * 24 * time.Hour
-
-// gradeExpiry grades the expiry of a certificate. Caddy renews when a third of the lifetime is
-// left: for short-lived certificates less than a sixth left means the renewal is late.
+// gradeExpiry grades the expiry of a certificate: by days, or by the share of the lifetime left
+// for short-lived certificates.
 func gradeExpiry(c Certificate, t module.Threshold) model.Severity {
-	lifetime := c.NotAfter.Sub(c.NotBefore)
-	if c.NotBefore.IsZero() || lifetime <= 0 || lifetime >= shortLived {
-		return t.Grade(c.DaysLeft)
-	}
-	switch left := c.DaysLeft * 24 * float64(time.Hour) / float64(lifetime); {
-	case c.DaysLeft <= 0:
-		return model.SeverityFail
-	case left < 1.0/6:
-		return model.SeverityWarn
-	default:
-		return model.SeverityOK
-	}
+	return certs.GradeExpiry(c.NotBefore, c.NotAfter, c.DaysLeft, t)
 }
 
 // Checks implements module.Checker.

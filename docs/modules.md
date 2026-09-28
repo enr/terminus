@@ -267,3 +267,34 @@ status = 200   # optional: expected status, default any 2xx or 3xx
 | `http.status` | fail on errors, unexpected status, or 4xx/5xx without an expected status |
 | `http.latency` | seconds to the response headers: warn ≥ 2, fail ≥ 5 |
 | `http.tls-expiry` | days before the certificate expires: warn < 14, fail < 7 |
+
+## tls
+
+TLS certificates stored on the machine and served by endpoints. Files: the directories in
+`paths` are searched recursively for `.pem`, `.crt` and `.cer` files (key files are not read);
+each certificate is reported once with the files that hold it (`cert.pem` and `fullchain.pem`),
+CA certificates are only used to verify the chains. Endpoints: a TLS connection to `address`
+with `server_name` as SNI, reporting the chain sent, the protocol version and whether the
+certificate covers the name. Chains are verified against the system roots and `ca_files`, at a
+time when the certificate is valid (expiry is a separate check).
+
+```toml
+[modules.tls]
+enabled = true
+paths = ["/etc/letsencrypt/live"]   # default: certbot and the Caddy storage of caddy and root
+ca_files = []                       # roots of private CAs
+timeout = "5s"
+
+[[modules.tls.endpoints]]
+address = "mail.example.org:993"    # default port 443
+server_name = ""                    # default: the host of address
+```
+
+Only implicit TLS is supported on endpoints (443, 465, 993, 995, ...), not STARTTLS.
+
+| Check | Rule |
+|---|---|
+| `tls.expiry` | days to expiry: warn < 14, fail < 7; short-lived certificates by share of lifetime, as in `caddy.tls-expiry` |
+| `tls.chain` | chain not verified: fail for endpoints (clients reject it: incomplete chain, self-signed), info for files (private CA, or intermediates stored elsewhere) |
+| `tls.hostname` | fail: the endpoint certificate does not cover `server_name`; warn: certificate without subject alternative names |
+| `tls.endpoint` | fail: no TLS connection |

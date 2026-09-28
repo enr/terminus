@@ -52,6 +52,8 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   `--output-dir` for `terminus diff` (docs/remote.md).
 - `terminus probe`: stops a unit or a container on purpose to verify that the endpoint and the
   monitoring notice the outage, and always starts it again (docs/probe.md).
+- Optional `tls` module: certificates in files (certbot, Caddy storage, configured paths) and
+  served by endpoints: expiry, chain verification, host names.
 
 ### Changed
 - `terminus` without arguments prints the facts as text; use `terminus facts -o json` for JSON.
