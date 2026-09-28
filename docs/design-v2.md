@@ -268,7 +268,26 @@ terminus probe --unit U          # sez. 11, esplicito, con conferma
    invece di `x/crypto/ssh`, così `~/.ssh/config` (alias, ProxyJump, identità), l'agent e la verifica
    di `known_hosts` valgono come per l'operatore senza reimplementarli; `probe` non ha `--disruptive`
    ma chiede conferma (`--yes` obbligatorio senza terminale). Vedi `docs/remote.md` e `docs/probe.md`.
-8. Moduli del catalogo, uno alla volta, secondo priorità.
+8. ✅ **Moduli del catalogo, prima tornata** (priorità: tls-certs, backup, updates, timers, firewall), un
+   commit per modulo, documentati in `docs/modules.md`:
+   - `tls` (package `tlscerts`): certificati da file (certbot, storage di Caddy, `paths`) e da endpoint
+     (`host:port` + SNI): scadenza (stessa logica "short-lived" di caddy, ora in `internal/certs`),
+     catena verificata sulle root di sistema + `ca_files` (fail per endpoint, info per file), SAN.
+   - `backup`: restic / borg / pgBackRest, solo letture senza lock (`--no-lock`, `--bypass-lock`),
+     credenziali da `password_file`/`env_file`, `max_age` per repository, esito della unit systemd del job.
+     Il modulo esterno d'esempio in doc e test passa da `backup` a `rsync` (i nomi dei moduli sono unici).
+   - `updates`: apt / dnf / yum / apk dall'indice già presente (nessun download), aggiornamenti di
+     sicurezza, età dell'indice, reboot pendente (`/run/reboot-required`, `needs-restarting -r`,
+     kernel più nuovo installato o moduli del kernel in uso rimossi).
+   - `timers`: timer systemd di sistema e utente (utenti come `systemd`, `--users` vale anche qui):
+     ultimo esito, unit mancante, timer abilitato ma non avviato, mai eseguito, senza prossima esecuzione.
+   - `firewall`: invece di elencare regole, **valuta** le catene input (nft JSON, che include firewalld,
+     ufw e iptables-nft, più iptables-legacy) per una nuova connessione da chiunque verso ogni porta in
+     ascolto su tutti gli indirizzi: open / restricted (regole con sorgenti o non comprese) / filtered,
+     IPv4 e IPv6 separati; porte di container rootful (`conmon`, `docker-proxy`) sempre raggiungibili
+     (DNAT scavalca la catena input).
+9. Catalogo, tornate successive (nginx/traefik/haproxy, docker, mysql/redis, ssh-hardening,
+   security-agents, disk-health, vpn, monitoring, dns, mail, k3s), sempre uno alla volta.
 
 ## Verifica
 

@@ -11,6 +11,25 @@ source "${SDLC_DIR}/config"
 
 cd "${PRJ_HOME}"
 
+# missing reports a check that cannot run here: skipped on a workstation, an error in CI (CI=true,
+# set by GitHub Actions and most CI systems) or with SDLC_STRICT=1, so that CI never passes
+# because a tool was missing.
+skipped=""
+missing() {
+  if [[ "${CI:-}" == "true" || "${SDLC_STRICT:-}" == "1" ]]; then
+    echo "error: $1"
+    exit 1
+  fi
+  echo "--- skipped: $1"
+  skipped="${skipped}
+  - $1"
+}
+
+command -v go >/dev/null || {
+  echo "go not found: install Go $(sed -n 's/^go //p' go.mod) or later"
+  exit 1
+}
+
 echo "--- gofmt"
 unformatted="$(gofmt -l cmd internal)"
 [[ -z "$unformatted" ]] || {
@@ -29,18 +48,33 @@ if command -v staticcheck >/dev/null; then
   echo "--- staticcheck"
   staticcheck ./...
 else
-  echo "--- staticcheck not installed, skipped (go install honnef.co/go/tools/cmd/staticcheck@latest)"
+  missing "staticcheck not installed (go install honnef.co/go/tools/cmd/staticcheck@latest)"
 fi
 
+# The race detector needs cgo and a C compiler: probe it on an empty test run, so that a real
+# test failure is not taken for a missing race detector (and the tests do not run twice).
 echo "--- go test"
-CGO_ENABLED=1 go test -race -cover ./... 2>/dev/null || go test -cover ./...
+if CGO_ENABLED=1 go test -race -run '^$' ./internal/model >/dev/null 2>&1; then
+  CGO_ENABLED=1 go test -race -cover ./...
+else
+  missing "race detector not available (it needs cgo and a C compiler): tests without -race"
+  go test -cover ./...
+fi
 
 echo "--- static build"
 "${SDLC_DIR}/build"
 for bin in "${PRJ_HOME}"/bin/*; do
-  file "$bin" | grep -q "statically linked" || {
-    echo "not a static binary: $(file "$bin")"
-    exit 1
-  }
+  if command -v file >/dev/null; then
+    file "$bin" | grep -q "statically linked" || {
+      echo "not a static binary: $(file "$bin")"
+      exit 1
+    }
+  else
+    # Without file(1): a binary built with CGO_ENABLED=0 and the internal linker is static.
+    go version -m "$bin" | grep -q "CGO_ENABLED=0" || {
+      echo "not built with CGO_ENABLED=0: ${bin}"
+      exit 1
+    }
+  fi
 done
-echo "ok"
+[[ -n "$skipped" ]] && echo "ok, with checks skipped:${skipped}" || echo "ok"

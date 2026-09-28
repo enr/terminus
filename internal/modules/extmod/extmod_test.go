@@ -21,12 +21,12 @@ func script(t *testing.T, dir, name, body string, mode os.FileMode) {
 
 func TestLoadAndRun(t *testing.T) {
 	dir := t.TempDir()
-	script(t, dir, "backup.sh", `cat <<'JSON'
+	script(t, dir, "rsync.sh", `cat <<'JSON'
 {"facts": {"last_snapshot": "2026-09-27"},
  "findings": [
-   {"id": "backup.age", "severity": "warn", "subject": "restic", "message": "last snapshot 30h ago", "evidence": {"age_hours": 30}},
+   {"id": "rsync.age", "severity": "warn", "subject": "nas", "message": "last sync 30h ago", "evidence": {"age_hours": 30}},
    {"id": "other.x", "severity": "ok", "message": "wrong prefix"},
-   {"id": "backup.nomsg", "severity": "ok"}
+   {"id": "rsync.nomsg", "severity": "ok"}
  ]}
 JSON
 `, 0o755)
@@ -43,14 +43,14 @@ JSON
 	for _, m := range mods {
 		byName[m.Name()] = m
 	}
-	if len(byName) != 3 || byName["backup"] == nil || byName["fails"] == nil || byName["garbage"] == nil {
+	if len(byName) != 3 || byName["rsync"] == nil || byName["fails"] == nil || byName["garbage"] == nil {
 		t.Fatalf("modules: %v", byName)
 	}
 	env := &module.Env{Runner: runner.Exec{}}
 
-	m := byName["backup"]
+	m := byName["rsync"]
 	got, err := m.Collect(context.Background(), env)
-	if err == nil || !strings.Contains(err.Error(), `must start with "backup."`) || !strings.Contains(err.Error(), "missing message") {
+	if err == nil || !strings.Contains(err.Error(), `must start with "rsync."`) || !strings.Contains(err.Error(), "missing message") {
 		t.Errorf("invalid findings not reported: %v", err)
 	}
 	c, ok := got.(module.Carrier)
@@ -58,7 +58,7 @@ JSON
 		t.Fatalf("facts: %#v", got)
 	}
 	fs := m.Check(env, got)
-	if len(fs) != 1 || fs[0].ID != "backup.age" || fs[0].Severity != model.SeverityWarn || fs[0].Subject != "restic" {
+	if len(fs) != 1 || fs[0].ID != "rsync.age" || fs[0].Severity != model.SeverityWarn || fs[0].Subject != "nas" {
 		t.Errorf("findings: %+v", fs)
 	}
 	if !m.External() || !m.Core() || m.Checks() != nil {

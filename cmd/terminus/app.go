@@ -11,10 +11,12 @@ import (
 	"github.com/enr/terminus/internal/engine"
 	"github.com/enr/terminus/internal/model"
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/modules/backup"
 	"github.com/enr/terminus/internal/modules/caddy"
 	"github.com/enr/terminus/internal/modules/cpu"
 	"github.com/enr/terminus/internal/modules/external"
 	"github.com/enr/terminus/internal/modules/extmod"
+	"github.com/enr/terminus/internal/modules/firewall"
 	"github.com/enr/terminus/internal/modules/http"
 	"github.com/enr/terminus/internal/modules/journal"
 	"github.com/enr/terminus/internal/modules/memory"
@@ -25,6 +27,9 @@ import (
 	"github.com/enr/terminus/internal/modules/storage"
 	"github.com/enr/terminus/internal/modules/system"
 	"github.com/enr/terminus/internal/modules/systemd"
+	"github.com/enr/terminus/internal/modules/timers"
+	"github.com/enr/terminus/internal/modules/tlscerts"
+	"github.com/enr/terminus/internal/modules/updates"
 	"github.com/enr/terminus/internal/runner"
 )
 
@@ -53,6 +58,11 @@ func builtinModules(externalFactsDir string) []module.Module {
 		quadlet.New(),
 		caddy.New(),
 		postgres.New(),
+		tlscerts.New(),
+		backup.New(),
+		updates.New(),
+		timers.New(),
+		firewall.New(),
 	}
 }
 
@@ -103,7 +113,7 @@ func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
 		}
 	}
 	if changed("users") {
-		// The same users for every module that inspects users (systemd, podman, quadlet).
+		// The same users for every module that inspects users (systemd, podman, quadlet, timers).
 		for _, m := range reg.All() {
 			if s, ok := m.(interface{ SetUsers([]string) error }); ok {
 				if err := s.SetUsers(g.users); err != nil {

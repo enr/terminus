@@ -25,7 +25,7 @@ enabled = false
 
 [checks]
 # Checks whose findings are dropped: IDs or prefixes.
-disable = ["net.public-listeners", "backup.*"]
+disable = ["net.public-listeners", "rsync.*"]
 
 # Thresholds: both warn and fail.
 [checks.thresholds."disk.usage"]
@@ -72,33 +72,33 @@ Flags win over the file: `--timeout`, `--modules-dir`, `--external-facts-dir`, `
 # External modules
 
 An external module is an executable in the modules directory (`/etc/terminus/modules.d`). It is
-named after the file without extension (`backup.sh` is the `backup` module; lowercase letters,
-digits, `-` and `_`) and runs by default: `enabled = false` in `[modules.backup]` disables it.
+named after the file without extension (`rsync.sh` is the `rsync` module; lowercase letters,
+digits, `-` and `_`) and runs by default: `enabled = false` in `[modules.rsync]` disables it.
 
 It must print on standard output, within the module timeout and exiting with code 0:
 
 ```json
 {
-  "facts": {"last_snapshot": "2026-09-26T03:00:00Z"},
+  "facts": {"last_sync": "2026-09-26T03:00:00Z"},
   "findings": [
     {
-      "id": "backup.age",
+      "id": "rsync.age",
       "severity": "warn",
-      "subject": "restic",
-      "message": "last snapshot 54h ago",
-      "hint": "check the restic timer",
+      "subject": "nas",
+      "message": "last sync 54h ago",
+      "hint": "check the rsync timer",
       "evidence": {"age_hours": 54}
     }
   ]
 }
 ```
 
-- `facts` is any JSON value; it appears under `.modules.backup.facts`.
+- `facts` is any JSON value; it appears under `.modules.rsync.facts`.
 - Each finding needs `id` (prefixed with the module name), `severity` (`ok`, `info`, `warn`,
   `fail`) and `message`; `subject`, `hint` and `evidence` are optional.
 - Unknown fields, invalid severities and a non-zero exit code are reported as module errors.
 
-Findings of external modules can be disabled like the others (`disable = ["backup.*"]`); their
+Findings of external modules can be disabled like the others (`disable = ["rsync.*"]`); their
 thresholds live in the module itself.
 
 [contrib/modules/reboot.sh](../contrib/modules/reboot.sh) is a complete example.

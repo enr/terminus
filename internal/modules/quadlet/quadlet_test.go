@@ -126,8 +126,21 @@ func TestRootlessScope(t *testing.T) {
 	if v := s.Files[3]; v.ObjectName != "pgdata-vol" || v.Generated.Creates != "pgdata-vol" || v.State.Active != "inactive" {
 		t.Errorf("volume: %+v", v)
 	}
-	if vs := s.Volumes["pgdata-vol"]; vs.OwnerUID == nil || *vs.OwnerUID != -1 {
-		t.Errorf("volume owner mapping (root-owned fixture is not mapped): %+v", vs)
+	// The fixture belongs to whoever runs the tests: root is not mapped in the user namespace
+	// (-1), the user itself is 0, others land in the subordinate range or are not mapped.
+	hostUID, _, err := fs.Owner("/home/apps/.local/share/containers/storage/volumes/pgdata-vol/_data")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantUID := users.NewIDMap(fs, apps).UID(hostUID)
+	switch hostUID {
+	case 0:
+		wantUID = -1
+	case apps.UID:
+		wantUID = 0
+	}
+	if vs := s.Volumes["pgdata-vol"]; vs.OwnerUID == nil || *vs.OwnerUID != wantUID || vs.HostOwnerUID != hostUID {
+		t.Errorf("volume owner mapping (fixture owned by %d, want %d in the container): %+v", hostUID, wantUID, vs)
 	}
 
 	sev := map[string]model.Severity{}

@@ -267,3 +267,137 @@ status = 200   # optional: expected status, default any 2xx or 3xx
 | `http.status` | fail on errors, unexpected status, or 4xx/5xx without an expected status |
 | `http.latency` | seconds to the response headers: warn ≥ 2, fail ≥ 5 |
 | `http.tls-expiry` | days before the certificate expires: warn < 14, fail < 7 |
+
+## tls
+
+TLS certificates stored on the machine and served by endpoints. Files: the directories in
+`paths` are searched recursively for `.pem`, `.crt` and `.cer` files (key files are not read);
+each certificate is reported once with the files that hold it (`cert.pem` and `fullchain.pem`),
+CA certificates are only used to verify the chains. Endpoints: a TLS connection to `address`
+with `server_name` as SNI, reporting the chain sent, the protocol version and whether the
+certificate covers the name. Chains are verified against the system roots and `ca_files`, at a
+time when the certificate is valid (expiry is a separate check).
+
+```toml
+[modules.tls]
+enabled = true
+paths = ["/etc/letsencrypt/live"]   # default: certbot and the Caddy storage of caddy and root
+ca_files = []                       # roots of private CAs
+timeout = "5s"
+
+[[modules.tls.endpoints]]
+address = "mail.example.org:993"    # default port 443
+server_name = ""                    # default: the host of address
+```
+
+Only implicit TLS is supported on endpoints (443, 465, 993, 995, ...), not STARTTLS.
+
+| Check | Rule |
+|---|---|
+| `tls.expiry` | days to expiry: warn < 14, fail < 7; short-lived certificates by share of lifetime, as in `caddy.tls-expiry` |
+| `tls.chain` | chain not verified: fail for endpoints (clients reject it: incomplete chain, self-signed), info for files (private CA, or intermediates stored elsewhere) |
+| `tls.hostname` | fail: the endpoint certificate does not cover `server_name`; warn: certificate without subject alternative names |
+| `tls.endpoint` | fail: no TLS connection |
+
+## backup
+
+The latest backup of each configured repository: a snapshot with
+`restic snapshots --json --latest 1`, an archive with `borg list --json --last 1 --bypass-lock`,
+a backup with `pgbackrest info --output=json`; its age, size when the tool reports it, and the
+state of the systemd unit that makes the backups. Nothing is written to the repositories (no
+locks either). Repositories are read in parallel; remote ones may need a longer `--timeout`.
+
+```toml
+[modules.backup]
+enabled = true
+
+[[modules.backup.repositories]]
+name = "home"
+type = "restic"                     # restic, borg, pgbackrest
+repository = "sftp:backup@nas:/srv/restic"   # pgbackrest: the stanza
+password_file = "/etc/restic/password"       # restic and borg
+env_file = "/etc/restic/env"        # KEY=value lines for the tool: S3/B2 credentials, BORG_RSH, ...
+host = ""                           # restic: only the snapshots of this host (shared repositories)
+user = ""                           # run the tool as this user (root only; pgbackrest: postgres)
+unit = "restic-backup.service"      # systemd unit that makes the backups
+max_age = "26h"                     # warn after max_age, fail after twice; default backup.age
+```
+
+Borg never prompts: a repository moved or unencrypted and never seen before is an error.
+
+| Check | Rule |
+|---|---|
+| `backup.age` | hours since the latest backup: warn ≥ 26, fail ≥ 50 (or `max_age` and twice it); warn at least when pgBackRest marks it as ended with an error |
+| `backup.repository` | fail: the repository cannot be read (the last line of the tool error is reported), or it holds no backup |
+| `backup.job` | fail: the last run of `unit` failed |
+
+## updates
+
+Pending package updates with the package manager of the machine, computed from the package
+index it already has (nothing is downloaded, no lock is taken):
+`apt-get -s dist-upgrade` (security updates come from a `-security` suite), `dnf`/`yum`
+`--cacheonly check-update` and `updateinfo list --security`, `apk version -l '<'` (no security
+information). Then the age of the package index (the counts are only as recent as the last
+`apt update`/`dnf makecache`), and whether a reboot is pending: `/run/reboot-required` (with the
+packages that asked for it), `needs-restarting -r` when installed, a kernel newer than the
+running one in `/lib/modules`, or the modules of the running kernel removed.
+
+No settings: `enabled = true` in `[modules.updates]`.
+
+| Check | Rule |
+|---|---|
+| `updates.security` | pending security updates: warn ≥ 1, fail ≥ 20 |
+| `updates.pending` | info: pending updates, with their names |
+| `updates.reboot` | warn: a reboot is pending, with the reasons |
+| `updates.index-age` | days since the package index was refreshed: warn ≥ 7, fail ≥ 30 |
+
+## timers
+
+The systemd timers of the system manager and of the user managers (users as in
+`[modules.systemd]`, `--users` overrides them): state, whether they are enabled, schedule
+(`OnCalendar=`, `OnBootSec=`, ...), `Persistent=`, last and next run, and the state of the unit each
+one starts: result and exit status of its last run.
+
+```toml
+[modules.timers]
+enabled = true
+users = "auto"
+timers = ["*.timer"]    # glob patterns
+```
+
+| Check | Rule |
+|---|---|
+| `timers.failed` | fail: the last run of the unit a timer starts failed, or the unit does not exist; ok per manager otherwise |
+| `timers.not-active` | warn: timer enabled but not started (installed without `--now`, or stopped): it does not fire until the next boot |
+| `timers.never-run` | info: never fired although active for more than a day and for longer than the wait to its next run |
+| `timers.no-next` | info: active calendar timer that will not fire again (a date in the past) |
+| `timers.scope` | a user manager not inspected, or not readable |
+
+## firewall
+
+The packet filter as the kernel applies it: `nft -j list ruleset` (which also holds the rules of
+firewalld, of ufw and of iptables-nft) and the iptables-legacy filter tables, which nft does not
+show; the state of firewalld and ufw when installed. Reading the rules requires root.
+
+The input chains are evaluated for a new connection from anywhere to each port listening on all
+addresses (as in the `network` module), following jumps, gotos and verdict maps. Rules for
+established connections and loopback are left out; rules with conditions that hold only for some
+clients (source addresses, named sets, matches not understood) make a port **restricted**
+instead of **open**; dropped or rejected ports are **filtered**. Base chains are all traversed, so
+a drop in any of them (nftables tables, legacy tables) wins. IPv4 and IPv6 are evaluated apart:
+`ip`/`inet` tables and `iptables` for the first, `ip6`/`inet` tables and `ip6tables` for the second.
+
+Ports held by `conmon` or `docker-proxy` belong to rootful containers: their traffic is
+DNAT-ed in prerouting and goes through the forward chain, not the input chain, so they are
+reported as reachable whatever the input chain says (the classic "docker bypasses ufw").
+
+```toml
+[modules.firewall]
+enabled = true
+public_ports = [22, 80, 443]    # optional: other reachable ports are warnings
+```
+
+| Check | Rule |
+|---|---|
+| `firewall.active` | warn: new connections to closed ports are accepted (fine behind a filtering cloud security group: disable it); warn: IPv4 filtered but IPv6 not, with ports listening on `::` (or the other way round) |
+| `firewall.exposed` | info: the ports reachable from other machines (restricted ones in the evidence); with `public_ports`, warn for the others |

@@ -13,8 +13,8 @@ import (
 // failingModule writes an external module that reports a failure.
 func failingModule(t *testing.T, dir string) {
 	t.Helper()
-	script := "#!/bin/sh\necho '{\"facts\":{\"v\":1},\"findings\":[{\"id\":\"backup.age\",\"severity\":\"fail\",\"message\":\"no snapshot <3 days> | x\"}]}'\n"
-	if err := os.WriteFile(filepath.Join(dir, "backup.sh"), []byte(script), 0o755); err != nil {
+	script := "#!/bin/sh\necho '{\"facts\":{\"v\":1},\"findings\":[{\"id\":\"rsync.age\",\"severity\":\"fail\",\"message\":\"no sync <3 days> | x\"}]}'\n"
+	if err := os.WriteFile(filepath.Join(dir, "rsync.sh"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -28,12 +28,12 @@ func TestReportFormatsAndOutputFile(t *testing.T) {
 	for format, marker := range map[string]string{
 		"markdown":   "## Findings",
 		"html":       "<!doctype html>",
-		"jsonl":      `"id":"backup.age"`,
-		"prometheus": `terminus_finding_severity{id="backup.age",module="backup",subject=""} 3`,
+		"jsonl":      `"id":"rsync.age"`,
+		"prometheus": `terminus_finding_severity{id="rsync.age",module="rsync",subject=""} 3`,
 		"json":       `"schema_version": 1`,
 	} {
 		out := filepath.Join(dir, "report."+format)
-		code, stdout, errOut := runCLI(t, "--modules-dir", mods, "--only", "backup,memory", "report", "-o", format, "--output-file", out)
+		code, stdout, errOut := runCLI(t, "--modules-dir", mods, "--only", "rsync,memory", "report", "-o", format, "--output-file", out)
 		if code != model.ExitFail || stdout != "" {
 			t.Errorf("%s: code %d, stdout %q, stderr %q", format, code, stdout, errOut)
 		}
@@ -46,7 +46,7 @@ func TestReportFormatsAndOutputFile(t *testing.T) {
 		}
 	}
 	b, _ := os.ReadFile(filepath.Join(dir, "report.markdown"))
-	if !strings.Contains(string(b), "## Facts") || !strings.Contains(string(b), "no snapshot &lt;3 days&gt; \\| x") {
+	if !strings.Contains(string(b), "## Facts") || !strings.Contains(string(b), "no sync &lt;3 days&gt; \\| x") {
 		t.Errorf("markdown report:\n%s", b)
 	}
 	b, _ = os.ReadFile(filepath.Join(dir, "report.html"))
@@ -61,7 +61,7 @@ func TestReportFormatsAndOutputFile(t *testing.T) {
 	}
 
 	// check keeps text by default; facts accepts --output-file too.
-	if code, out, _ := runCLI(t, "--modules-dir", mods, "--only", "backup", "check", "--color", "never"); code != model.ExitFail || !strings.Contains(out, "backup.age") {
+	if code, out, _ := runCLI(t, "--modules-dir", mods, "--only", "rsync", "check", "--color", "never"); code != model.ExitFail || !strings.Contains(out, "rsync.age") {
 		t.Errorf("check: %d %s", code, out)
 	}
 	factsOut := filepath.Join(dir, "facts.json")
@@ -85,10 +85,10 @@ func TestDiffCommand(t *testing.T) {
 		t.Fatalf("before: %d %s", code, errOut)
 	}
 	failingModule(t, mods)
-	runCLI(t, "--modules-dir", mods, "--only", "memory,system,backup", "report", "-o", "json", "--output-file", after)
+	runCLI(t, "--modules-dir", mods, "--only", "memory,system,rsync", "report", "-o", "json", "--output-file", after)
 
 	code, out, errOut := runCLI(t, "diff", before, after, "--facts")
-	if code != model.ExitFail || !strings.Contains(out, "+ new fail") || !strings.Contains(out, "backup.v = 1") {
+	if code != model.ExitFail || !strings.Contains(out, "+ new fail") || !strings.Contains(out, "rsync.v = 1") {
 		t.Fatalf("diff: %d %s %s", code, out, errOut)
 	}
 	if code, out, _ := runCLI(t, "diff", after, before, "-o", "json"); code != 0 || !strings.Contains(out, `"kind": "resolved"`) {

@@ -3,7 +3,7 @@
 //	{
 //	  "facts": { ... any JSON ... },
 //	  "findings": [
-//	    {"id": "backup.age", "severity": "warn", "subject": "restic",
+//	    {"id": "rsync.age", "severity": "warn", "subject": "nas",
 //	     "message": "last snapshot 3 days ago", "hint": "...", "evidence": {"age_hours": 72}}
 //	  ]
 //	}

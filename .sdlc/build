@@ -10,7 +10,7 @@ PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
 source "${SDLC_DIR}/config"
 
 BIN_DIR="${PRJ_HOME}/bin"
-[[ -d "$BIN_DIR" ]] && rm -r "$BIN_DIR"
+if [[ -d "$BIN_DIR" ]]; then rm -r "$BIN_DIR"; fi
 mkdir "$BIN_DIR"
 
 cd "${PRJ_HOME}"

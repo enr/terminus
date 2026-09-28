@@ -108,25 +108,25 @@ func TestModulesListAndOptionalModule(t *testing.T) {
 func TestExternalModule(t *testing.T) {
 	dir := t.TempDir()
 	script := `#!/bin/sh
-echo '{"facts": {"repo": "s3"}, "findings": [{"id": "backup.age", "severity": "fail", "message": "no snapshot"}]}'
+echo '{"facts": {"repo": "s3"}, "findings": [{"id": "rsync.age", "severity": "fail", "message": "no sync"}]}'
 `
-	if err := os.WriteFile(filepath.Join(dir, "backup.sh"), []byte(script), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "rsync.sh"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	code, out, errOut := runCLI(t, "--modules-dir", dir, "--only", "backup", "check", "-o", "json")
+	code, out, errOut := runCLI(t, "--modules-dir", dir, "--only", "rsync", "check", "-o", "json")
 	var r model.Report
 	if err := json.Unmarshal([]byte(out), &r); err != nil {
 		t.Fatalf("%v: %s", err, errOut)
 	}
-	if code != model.ExitFail || len(r.Findings) != 1 || r.Findings[0].Module != "backup" {
+	if code != model.ExitFail || len(r.Findings) != 1 || r.Findings[0].Module != "rsync" {
 		t.Fatalf("code %d findings %+v", code, r.Findings)
 	}
-	if facts, _ := r.Modules["backup"].Facts.(map[string]any); facts["repo"] != "s3" {
-		t.Errorf("facts: %#v", r.Modules["backup"].Facts)
+	if facts, _ := r.Modules["rsync"].Facts.(map[string]any); facts["repo"] != "s3" {
+		t.Errorf("facts: %#v", r.Modules["rsync"].Facts)
 	}
 
-	cfg := writeConfig(t, "[checks]\ndisable = [\"backup.*\"]\n")
-	if code, _, errOut := runCLI(t, "--config", cfg, "--modules-dir", dir, "--only", "backup", "check"); code != model.ExitOK {
+	cfg := writeConfig(t, "[checks]\ndisable = [\"rsync.*\"]\n")
+	if code, _, errOut := runCLI(t, "--config", cfg, "--modules-dir", dir, "--only", "rsync", "check"); code != model.ExitOK {
 		t.Errorf("disabled external check: code %d %s", code, errOut)
 	}
 }

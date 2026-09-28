@@ -34,7 +34,7 @@ terminus version
 
 Facts and checks are grouped in modules: the core ones (`system`, `cpu`, `memory`, `storage`,
 `network`, `systemd`, `external` for custom facts) run by default, optional ones (`http`,
-`journal`, `podman`, `quadlet`, `caddy`, `postgres`) are enabled in
+`journal`, `podman`, `quadlet`, `caddy`, `postgres`, `tls`, `backup`, `updates`, `timers`, `firewall`) are enabled in
 [`/etc/terminus/terminus.toml`](docs/configuration.md), and [external modules](docs/configuration.md#external-modules)
 are executables dropped in `/etc/terminus/modules.d`. `--only memory,storage` runs just some.
 Terminus also supports [custom facts](docs/custom-facts.md) and a [HTTP API](docs/api.md).
@@ -139,5 +139,8 @@ Use the scripts in the `.sdlc/` directory.
 
 - Build a static binary in `bin/`: `.sdlc/build`
 - Build distribution archives for linux/amd64 and linux/arm64 in `dist/`: `.sdlc/build-dist`
-- Run format check, vet, staticcheck (if installed), tests and the static build: `.sdlc/check`
+- Run format check, vet, staticcheck, tests (with the race detector when cgo and a C compiler are
+  available) and the static build: `.sdlc/check`. On a workstation the checks that need a
+  missing tool are skipped and listed at the end; in CI (`CI=true`) or with `SDLC_STRICT=1`
+  they are errors.
 - Update dependencies: `.sdlc/update`

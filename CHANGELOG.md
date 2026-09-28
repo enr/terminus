@@ -35,7 +35,7 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   the .container names the volume without the suffix), quadlet.network-not-used, quadlet.dryrun,
   quadlet.unit-not-loaded, quadlet.unit-never-active, quadlet.changed-since-start,
   quadlet.volume-owner.
-- `--users` applies to systemd, podman and quadlet.
+- `--users` applies to systemd, podman, quadlet and timers.
 - Optional `caddy` module: domains served, upstreams, served certificates, DNS of the domains.
 - Optional `postgres` module: connections by client, settings, sizes, stuck transactions.
 - `public_ports` in `[modules.network]`: unexpected public ports become warnings.
@@ -52,6 +52,18 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   `--output-dir` for `terminus diff` (docs/remote.md).
 - `terminus probe`: stops a unit or a container on purpose to verify that the endpoint and the
   monitoring notice the outage, and always starts it again (docs/probe.md).
+- Optional `tls` module: certificates in files (certbot, Caddy storage, configured paths) and
+  served by endpoints: expiry, chain verification, host names.
+- Optional `backup` module: latest backup of restic, borg and pgBackRest repositories, its age,
+  and the result of the systemd unit that makes it.
+- Optional `updates` module: pending updates and security updates (apt, dnf, yum, apk) from the
+  package index already on the machine, its age, pending reboot (marker, needs-restarting, newer
+  kernel installed).
+- Optional `timers` module: systemd timers of the system and user managers, schedule, last and
+  next run, result of the last run.
+- Optional `firewall` module: nftables (firewalld, ufw and iptables-nft rules included) and
+  iptables-legacy rules evaluated for new connections from anywhere: whether closed ports are
+  filtered, for IPv4 and IPv6, and which listening ports are reachable from other machines.
 
 ### Changed
 - `terminus` without arguments prints the facts as text; use `terminus facts -o json` for JSON.
