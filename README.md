@@ -139,5 +139,8 @@ Use the scripts in the `.sdlc/` directory.
 
 - Build a static binary in `bin/`: `.sdlc/build`
 - Build distribution archives for linux/amd64 and linux/arm64 in `dist/`: `.sdlc/build-dist`
-- Run format check, vet, staticcheck (if installed), tests and the static build: `.sdlc/check`
+- Run format check, vet, staticcheck, tests (with the race detector when cgo and a C compiler are
+  available) and the static build: `.sdlc/check`. On a workstation the checks that need a
+  missing tool are skipped and listed at the end; in CI (`CI=true`) or with `SDLC_STRICT=1`
+  they are errors.
 - Update dependencies: `.sdlc/update`

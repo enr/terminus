@@ -8,10 +8,10 @@ SDLC_DIR="$( cd -P "$( dirname "$TOOL_SOURCE" )" && pwd )"
 PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
 
 BIN_DIR="${PRJ_HOME}/bin"
-[[ -d "$BIN_DIR" ]] && rm -r "$BIN_DIR"
+if [[ -d "$BIN_DIR" ]]; then rm -r "$BIN_DIR"; fi
 
 BUILD_DIR="${PRJ_HOME}/build"
-[[ -d "$BUILD_DIR" ]] && rm -r "$BUILD_DIR"
+if [[ -d "$BUILD_DIR" ]]; then rm -r "$BUILD_DIR"; fi
 
 DIST_DIR="${PRJ_HOME}/dist"
-[[ -d "$DIST_DIR" ]] && rm -r "$DIST_DIR"
+if [[ -d "$DIST_DIR" ]]; then rm -r "$DIST_DIR"; fi
