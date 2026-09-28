@@ -365,6 +365,7 @@ func writeExample(w io.Writer, reg *module.Registry) error {
 		}
 	}
 	b.WriteString("\n[checks]\n# Checks whose findings are dropped: IDs or prefixes (\"disk.*\").\n#disable = []\n")
+	b.WriteString("\n# Findings dropped by subject: check ID (or prefix) -> glob patterns matched against Subject.\n#[checks.exclude]\n#\"unit.memory-limit\" = [\"*:app-*.service\"]\n")
 	ids := reg.Checks()
 	var keys []string
 	for id, ci := range ids {

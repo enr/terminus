@@ -128,6 +128,29 @@ fail = 0.1
 	}
 }
 
+func TestExclude(t *testing.T) {
+	c, err := load(t, `
+[checks.exclude]
+"disk.readonly" = ["*:app-*.service"]
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, _ := registry(t)
+	if err := c.Configure(reg); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Validate(reg); err != nil {
+		t.Fatal(err)
+	}
+	if !c.Checks.IsExcluded("disk.readonly", "user:enrico:app-x.service") {
+		t.Error("exclude not applied")
+	}
+	if c.Checks.IsExcluded("disk.readonly", "system:sshd.service") {
+		t.Error("exclude matched an unrelated subject")
+	}
+}
+
 func TestInvalid(t *testing.T) {
 	cases := map[string]string{
 		`timeuot = "1s"`:                                                 `unknown key "timeuot"`,
@@ -144,6 +167,8 @@ func TestInvalid(t *testing.T) {
 		"[checks.thresholds.\"mem.available\"]\nwarn=0.05\nfail=0.1":     `must be above fail`,
 		"[checks.thresholds.\"disk.usage\"]\nwarn=0.9":                   `both warn and fail are required`,
 		"[checks.thresholds.\"disk.usage\"]\nwarn=0.1\nfail=0.2\nfial=3": `unknown key`,
+		"[checks.exclude]\n\"dsk.usage\" = [\"*\"]":                      `no check matches "dsk.usage"`,
+		"[checks.exclude]\n\"disk.usage\" = [\"[\"]":                     `invalid pattern`,
 		`not toml`: `expected`,
 	}
 	for data, want := range cases {

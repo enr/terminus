@@ -123,4 +123,33 @@ func TestThreshold(t *testing.T) {
 			t.Errorf("IsDisabled(%s) != %v", id, want)
 		}
 	}
+
+	if nilSettings.IsExcluded("unit.memory-limit", "user:enrico:app-x.service") {
+		t.Error("nil safety on IsExcluded")
+	}
+	excl := &CheckSettings{
+		Exclude: map[string][]string{
+			"unit.memory-limit": {"*:app-*.service"},
+			"unit.*":            {"system:sshd.service"},
+		},
+	}
+	cases := []struct {
+		id, subject string
+		want        bool
+	}{
+		{"unit.memory-limit", "user:enrico:app-com.mitchellh.ghostty.service", true},
+		{"unit.memory-limit", "user:enrico:mydaemon.service", false},
+		{"unit.restarts", "system:sshd.service", true},
+		{"unit.restarts", "system:cron.service", false},
+	}
+	for _, c := range cases {
+		if got := excl.IsExcluded(c.id, c.subject); got != c.want {
+			t.Errorf("IsExcluded(%s, %s) = %v, want %v", c.id, c.subject, got, c.want)
+		}
+	}
+
+	bad := &CheckSettings{Exclude: map[string][]string{"unit.memory-limit": {"[/"}}}
+	if bad.IsExcluded("unit.memory-limit", "user:enrico:app-x.service") {
+		t.Error("malformed glob must never match")
+	}
 }

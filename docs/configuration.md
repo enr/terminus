@@ -31,6 +31,11 @@ disable = ["net.public-listeners", "rsync.*"]
 [checks.thresholds."disk.usage"]
 warn = 0.80
 fail = 0.90
+
+# Findings dropped by subject: a check ID (or prefix) mapped to glob patterns matched against
+# the finding's Subject. Unlike "disable", the check still runs for every other subject.
+[checks.exclude]
+"unit.memory-limit" = ["*:app-*.service"]
 ```
 
 ## Validation

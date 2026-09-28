@@ -62,7 +62,7 @@ func Run(ctx context.Context, mods []module.Module, env *module.Env, opts Option
 						o.result.Errors = append(o.result.Errors, err.Error())
 					}
 					for _, f := range fs {
-						if env != nil && env.Checks.IsDisabled(f.ID) {
+						if env != nil && (env.Checks.IsDisabled(f.ID) || env.Checks.IsExcluded(f.ID, f.Subject)) {
 							continue
 						}
 						f.Module = m.Name()

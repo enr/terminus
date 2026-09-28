@@ -13,6 +13,9 @@
 //	warn = 0.80
 //	fail = 0.90
 //
+//	[checks.exclude]
+//	"unit.memory-limit" = ["*:app-*.service"]
+//
 // Decoding is strict: unknown keys, modules and checks are errors, so that a typo cannot
 // silently disable something.
 package config
@@ -21,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,6 +48,7 @@ type file struct {
 	Checks     struct {
 		Disable    []string                    `toml:"disable"`
 		Thresholds map[string]module.Threshold `toml:"thresholds"`
+		Exclude    map[string][]string         `toml:"exclude"`
 	} `toml:"checks"`
 }
 
@@ -104,7 +109,7 @@ func (c *Config) parse(data string) error {
 		}
 	}
 	c.ModulesDir = f.ModulesDir
-	c.Checks = module.CheckSettings{Disabled: f.Checks.Disable, Thresholds: f.Checks.Thresholds}
+	c.Checks = module.CheckSettings{Disabled: f.Checks.Disable, Thresholds: f.Checks.Thresholds, Exclude: f.Checks.Exclude}
 	for name, prim := range f.Modules {
 		var s struct {
 			Enabled *bool `toml:"enabled"`
@@ -178,6 +183,22 @@ func (c *Config) Validate(reg *module.Registry) error {
 			errs = append(errs, fmt.Errorf("checks.disable: no check matches %q", pattern))
 		}
 	}
+	var excludePatterns []string
+	for pattern := range c.Checks.Exclude {
+		excludePatterns = append(excludePatterns, pattern)
+	}
+	sort.Strings(excludePatterns)
+	for _, pattern := range excludePatterns {
+		if !matchesAny(pattern, checks, reg) {
+			errs = append(errs, fmt.Errorf("checks.exclude: no check matches %q", pattern))
+		}
+		for _, g := range c.Checks.Exclude[pattern] {
+			if _, err := path.Match(g, ""); err != nil {
+				errs = append(errs, fmt.Errorf("checks.exclude.%q: invalid pattern %q: %w", pattern, g, err))
+			}
+		}
+	}
+
 	var ids []string
 	for id := range c.Checks.Thresholds {
 		ids = append(ids, id)

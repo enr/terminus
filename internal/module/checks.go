@@ -2,6 +2,7 @@ package module
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/enr/terminus/internal/model"
@@ -58,6 +59,9 @@ type CheckSettings struct {
 	Disabled []string
 	// Thresholds overrides the warn and fail values of checks, by ID.
 	Thresholds map[string]Threshold
+	// Exclude maps a check ID, or a prefix ending in ".*", to glob patterns (path.Match syntax)
+	// matched against a finding's Subject; a match drops the finding.
+	Exclude map[string][]string
 }
 
 // Threshold returns the configured threshold of a check, keeping the direction and unit of def.
@@ -82,6 +86,25 @@ func (s *CheckSettings) IsDisabled(id string) bool {
 	for _, d := range s.Disabled {
 		if MatchCheck(d, id) {
 			return true
+		}
+	}
+	return false
+}
+
+// IsExcluded reports whether a finding of a check, identified by its subject, is dropped by an
+// exclude pattern. It is safe on nil settings. A malformed glob never matches.
+func (s *CheckSettings) IsExcluded(id, subject string) bool {
+	if s == nil {
+		return false
+	}
+	for pattern, globs := range s.Exclude {
+		if !MatchCheck(pattern, id) {
+			continue
+		}
+		for _, g := range globs {
+			if ok, err := path.Match(g, subject); ok && err == nil {
+				return true
+			}
 		}
 	}
 	return false
