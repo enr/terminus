@@ -3,6 +3,8 @@ package runner
 import (
 	"context"
 	"errors"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -49,8 +51,77 @@ func TestExecRunErrors(t *testing.T) {
 	if _, err := (Exec{}).Run(context.Background(), Cmd{Name: "terminus-no-such-command"}); err == nil {
 		t.Fatal("expected error for missing command")
 	}
-	if _, err := (Exec{}).Run(context.Background(), Cmd{Name: "true", User: "nobody"}); !errors.Is(err, ErrUserNotSupported) {
-		t.Fatalf("err = %v, want ErrUserNotSupported", err)
+	if _, err := (Exec{}).Run(context.Background(), Cmd{Name: "true", User: "terminus-no-such-user"}); err == nil {
+		t.Fatal("unknown user accepted")
+	}
+}
+
+func TestExecRunAsUser(t *testing.T) {
+	cur, err := LookupAccount(strconv.Itoa(os.Geteuid()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The current user: no privilege needed, only the session environment.
+	res, err := Exec{}.Run(context.Background(), Cmd{Name: "sh", Args: []string{"-c", `printf %s "$XDG_RUNTIME_DIR"`}, User: cur.Name})
+	if err != nil || string(res.Stdout) != cur.RuntimeDir() {
+		t.Fatalf("current user: %q %v", res.Stdout, err)
+	}
+
+	res, err = Exec{}.Run(context.Background(), Cmd{Name: "sh", Args: []string{"-c", `id -u; printf %s "$DBUS_SESSION_BUS_ADDRESS"`}, User: "nobody"})
+	if os.Geteuid() != 0 {
+		if !errors.Is(err, ErrNeedRoot) {
+			t.Fatalf("non-root: err = %v, want ErrNeedRoot", err)
+		}
+		return
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(res.Stdout) != "65534\nunix:path=/run/user/65534/bus" {
+		t.Fatalf("as nobody: %q", res.Stdout)
+	}
+}
+
+func TestLookupAccount(t *testing.T) {
+	a, err := LookupAccount("0")
+	if err != nil || a.Name != "root" || a.UID != 0 {
+		t.Fatalf("uid 0: %+v %v", a, err)
+	}
+	a, err = LookupAccount("4242")
+	if err != nil || a.UID != 4242 {
+		t.Fatalf("uid without passwd entry: %+v %v", a, err)
+	}
+}
+
+func TestExecStream(t *testing.T) {
+	var lines []string
+	res, err := Exec{}.Stream(context.Background(), Cmd{Name: "sh", Args: []string{"-c", "printf 'a\\nb\\nc'; exit 2"}},
+		func(l []byte) error { lines = append(lines, string(l)); return nil })
+	if err != nil || res.ExitCode != 2 || strings.Join(lines, ",") != "a,b,c" {
+		t.Fatalf("stream: %v %v %v", lines, res, err)
+	}
+
+	stop := errors.New("enough")
+	start := time.Now()
+	n := 0
+	_, err = Exec{}.Stream(context.Background(), Cmd{Name: "yes"}, func([]byte) error {
+		n++
+		if n == 3 {
+			return stop
+		}
+		return nil
+	})
+	if !errors.Is(err, stop) || time.Since(start) > 3*time.Second {
+		t.Fatalf("stopped stream: %v after %s", err, time.Since(start))
+	}
+
+	f := &Fake{Results: map[string]Result{"u|cmd x": {Stdout: []byte("1\n2\n")}}}
+	lines = nil
+	if _, err := f.Stream(context.Background(), Cmd{Name: "cmd", Args: []string{"x"}, User: "u"}, func(l []byte) error {
+		lines = append(lines, string(l))
+		return nil
+	}); err != nil || strings.Join(lines, ",") != "1,2" {
+		t.Fatalf("fake stream: %v %v", lines, err)
 	}
 }
 

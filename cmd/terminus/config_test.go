@@ -168,3 +168,19 @@ func TestConfigExampleIsValid(t *testing.T) {
 		}
 	}
 }
+
+func TestUsersFlagAndSystemdConfig(t *testing.T) {
+	code, _, errOut := runCLI(t, "--users", "terminus-no-such-user", "check")
+	if code != model.ExitError || !strings.Contains(errOut, `unknown user "terminus-no-such-user"`) {
+		t.Fatalf("--users: code %d, stderr %q", code, errOut)
+	}
+	cfg := writeConfig(t, "[modules.systemd]\nusers = \"everyone\"\n")
+	code, _, errOut = runCLI(t, "--config", cfg, "check")
+	if code != model.ExitError || !strings.Contains(errOut, "modules.systemd.users") {
+		t.Fatalf("users setting: code %d, stderr %q", code, errOut)
+	}
+	cfg = writeConfig(t, "[modules.systemd]\nusers = [\"root\"]\nhistory = \"3d\"\n\n[modules.journal]\nenabled = true\nwindow = \"1h\"\n")
+	if code, out, errOut := runCLI(t, "--config", cfg, "config", "validate"); code != 0 || !strings.Contains(out, "journal") {
+		t.Fatalf("valid systemd/journal settings: %d %s %s", code, out, errOut)
+	}
+}

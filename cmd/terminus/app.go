@@ -15,10 +15,12 @@ import (
 	"github.com/enr/terminus/internal/modules/external"
 	"github.com/enr/terminus/internal/modules/extmod"
 	"github.com/enr/terminus/internal/modules/http"
+	"github.com/enr/terminus/internal/modules/journal"
 	"github.com/enr/terminus/internal/modules/memory"
 	"github.com/enr/terminus/internal/modules/network"
 	"github.com/enr/terminus/internal/modules/storage"
 	"github.com/enr/terminus/internal/modules/system"
+	"github.com/enr/terminus/internal/modules/systemd"
 	"github.com/enr/terminus/internal/runner"
 )
 
@@ -39,8 +41,10 @@ func builtinModules(externalFactsDir string) []module.Module {
 		memory.New(),
 		storage.New(),
 		network.New(),
+		systemd.New(),
 		external.New(externalFactsDir),
 		http.New(),
+		journal.New(),
 	}
 }
 
@@ -88,6 +92,13 @@ func newApp(g *globalOptions, stderr io.Writer) (*app, error) {
 	if changed("external-facts-dir") {
 		if m, ok := reg.Get(external.Name); ok {
 			m.(*external.Module).SetDir(g.externalFactsDir)
+		}
+	}
+	if changed("users") {
+		if m, ok := reg.Get(systemd.Name); ok {
+			if err := m.(*systemd.Module).SetUsers(g.users); err != nil {
+				return nil, fmt.Errorf("--users: %w", err)
+			}
 		}
 	}
 	if err := cfg.Validate(reg); err != nil {

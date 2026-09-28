@@ -67,7 +67,7 @@ direction of the check: for `mem.available` and `http.tls-expiry` lower values a
 
 ## Command line
 
-Flags win over the file: `--timeout`, `--modules-dir`, `--external-facts-dir`.
+Flags win over the file: `--timeout`, `--modules-dir`, `--external-facts-dir`, `--users`.
 
 # External modules
 

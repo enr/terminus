@@ -22,6 +22,12 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
   `--modules`, `--no-modules`, `--only` and `--modules-dir` flags.
 - External modules: executables in `/etc/terminus/modules.d` printing facts and findings as JSON.
 - Optional `http` module: status, latency and TLS certificate expiry of configured endpoints.
+- Core `systemd` module: units of the system and user managers (users "auto", listed, or
+  `--users`), memory peaks and limits, cgroup OOM counters, journal history of OOM kills,
+  failures, restarts and exit codes, linger; checks systemd.failed, unit.memory-peak,
+  unit.memory-limit, unit.oom-kills, unit.restarts, user.linger, resources.overcommit.
+- Optional `journal` module: journal disk usage and log lines per unit.
+- Commands run as another user (root only) with the session environment of that user.
 - Output formats: `text` for humans (colors only on a terminal, `--color`, `NO_COLOR`) and
   `json` with a versioned schema (`schema_version`), per-module status, errors and timings.
 - Modules run in parallel with a per-module timeout (`--timeout`); a failing or hanging module

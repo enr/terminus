@@ -73,12 +73,72 @@ LISTEN, bound UDP) with the owning process. Processes of other users are visible
 | `net.dns` | fail without DNS servers |
 | `net.public-listeners` | info: TCP ports listening on all addresses |
 
+## systemd
+
+Units of the system manager and of the user managers (`systemctl --user`): failed units, and for
+the services matching `units` (all the running or failed ones by default) state, automatic
+restarts, main process exit, memory current/peak/limit (`MemoryMax`, `MemoryHigh`), tasks, CPU
+time, cgroup, unit file (`SourcePath` is the quadlet file for generated units). Missing values are
+read from the cgroup v2 files (`memory.peak` before systemd 253); `memory.events` gives the OOM
+kills of the current cgroup.
+
+The journal adds the history of each unit over the `history` window, with one indexed query on the
+systemd messages: OOM kills, failures by result, automatic restarts, main process exits by code
+(137 = SIGKILL, often the OOM killer; 143 = SIGTERM, a stop or a deploy).
+
+```toml
+[modules.systemd]
+users = "auto"          # "auto", [] or ["apps", "1001"]
+units = ["*.service"]
+history = "7d"
+```
+
+**Users.** No user is built in. With `users = "auto"` (the default) terminus inspects the users
+that have linger enabled (`/var/lib/systemd/linger/<name>`) or a running user manager
+(`/run/user/<uid>/systemd`); `users = []` inspects only the system manager; a list selects exactly
+those users, by name or UID (users from LDAP/SSSD must be given by UID: the static binary reads
+only `/etc/passwd`). `--users apps,web` overrides the setting for one run. An unknown user is a
+configuration error.
+
+As root terminus runs `systemctl --user` as each user, with their session environment
+(`XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS`): no `sudo -u` needed. As another user only the
+system manager and the user's own manager are inspected; the others are reported as skipped.
+The module is skipped when systemd is not the init system (containers).
+
+| Check | Rule |
+|---|---|
+| `systemd.failed` | fail for each failed unit (`system:backup.service`, `user:apps:myapp.service`) |
+| `unit.memory-peak` | memory peak over MemoryMax: warn ≥ 0.9, fail ≥ 1.0 |
+| `unit.memory-limit` | info: running user service without MemoryMax |
+| `unit.oom-kills` | fail when the OOM killer hit the unit in the history window |
+| `unit.restarts` | automatic restarts since the unit started: warn ≥ 3, fail ≥ 10, with the exit reasons |
+| `user.linger` | fail for a user with enabled services or quadlets but without linger |
+| `resources.overcommit` | sum of MemoryMax of running services over RAM: warn ≥ 1.0, fail ≥ 1.5 |
+| `systemd.version` | info: facts not available (systemd < 253, cgroup v1, journal not readable, not root) |
+
 ## external
 
 [Custom facts](custom-facts.md) from `/etc/terminus/facts.d` (`dir` in `[modules.external]`).
 Skipped when the directory does not exist.
 
 # Optional modules
+
+## journal
+
+Disk space of the journal files over the size of their filesystem, and log lines per unit in the
+`window` (one pass on the journal, read as a stream: it is not a core module because on busy
+machines it takes a while).
+
+```toml
+[modules.journal]
+enabled = true
+window = "24h"
+```
+
+| Check | Rule |
+|---|---|
+| `journal.disk-usage` | journal files over their filesystem: warn ≥ 0.1, fail ≥ 0.2 |
+| `journal.noisy-unit` | lines per day of a unit: warn ≥ 50000, fail ≥ 500000 |
 
 ## http
 

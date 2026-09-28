@@ -34,6 +34,7 @@ type globalOptions struct {
 	only             []string
 	enable           []string
 	disable          []string
+	users            []string
 	// changed tells whether a flag was set on the command line (flags win over the configuration).
 	changed func(name string) bool
 }
@@ -113,6 +114,7 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 	pf.StringSliceVar(&g.only, "only", nil, "run only these modules")
 	pf.StringSliceVar(&g.enable, "modules", nil, "enable these modules too")
 	pf.StringSliceVar(&g.disable, "no-modules", nil, "disable these modules")
+	pf.StringSliceVar(&g.users, "users", nil, "users whose systemd user manager is inspected (default from the configuration: auto)")
 
 	// Defined here to keep -v free: subcommands use it for --verbose.
 	root.Flags().Bool("version", false, "print the version")
