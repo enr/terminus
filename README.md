@@ -1,130 +1,143 @@
 # Terminus
 
-Get facts about a system. Parallel execution, structured output, remote API.
+Get facts about a Linux machine and check them. Parallel execution, structured output, remote API.
+
+terminus v2 is being built: the design is in [docs/design-v2.md](docs/design-v2.md).
 
 ## Install
 
+Download the archive for your architecture from the releases page: terminus is a single static
+binary with no dependencies.
+
 ```shell
-$ wget https://github.com/jtopjian/terminus/releases/download/v0.1.0/terminus.gz
-$ gzip -d terminus.gz
-$ chmod +x terminus
+$ tar xzf terminus-*_linux_amd64.tar.gz
+$ sudo install terminus-*_linux_amd64/terminus /usr/local/bin/
 ```
 
 ## Usage
 
-Terminus ships with a default set of facts that represent info about the system. Terminus also supports [custom facts](docs/custom-facts.md) and a [HTTP API](docs/api.md).
+```
+terminus facts [path]     print the facts (all of them, or the value at path)
+terminus check            evaluate the facts
+terminus report           checks and facts in one document (markdown, html, json)
+terminus diff A.json B.json  what changed between two reports
+terminus remote HOST...   run terminus on other machines through ssh
+terminus probe            stop a service on purpose to verify that the monitoring notices
+terminus serve            serve facts and reports over HTTP
+terminus modules list     which modules run and why
+terminus modules detect   which optional modules fit this machine
+terminus checks list      checks with their effective thresholds
+terminus config example   a commented terminus.toml with every setting
+terminus config validate  check the configuration
+terminus version
+```
+
+Facts and checks are grouped in modules: the core ones (`system`, `cpu`, `memory`, `storage`,
+`network`, `systemd`, `external` for custom facts) run by default, optional ones (`http`,
+`journal`, `podman`, `quadlet`, `caddy`, `postgres`) are enabled in
+[`/etc/terminus/terminus.toml`](docs/configuration.md), and [external modules](docs/configuration.md#external-modules)
+are executables dropped in `/etc/terminus/modules.d`. `--only memory,storage` runs just some.
+Terminus also supports [custom facts](docs/custom-facts.md) and a [HTTP API](docs/api.md).
+
+### Check the machine
+
+```shell
+$ terminus check
+srv-01 · 2026-09-28T10:00:00Z · 14ms
+✖ 0 fail  ⚠ 2 warn  ℹ 1 info  ✔ 8 ok
+
+Findings
+  ⚠ warn  disk.usage            88% used [/var]
+  ⚠ warn  mem.oom-kills         3 processes killed by the OOM killer since boot [oom killer]
+  ℹ info  net.public-listeners  3 TCP ports listen on all addresses: 22 (sshd), 80 (caddy), 443 (caddy) [tcp]
+  ✔ ok    cpu.load              15 min load 0.28 on 4 CPUs (0.07 per CPU) [load average]
+  ✔ ok    disk.usage            41% used [/]
+  ...
+
+Modules
+  cpu       ok       0ms
+  external  skipped  directory /etc/terminus/facts.d does not exist
+  memory    ok       0ms
+  network   ok       5ms
+  storage   ok       1ms
+  system    ok       5ms
+```
+
+The exit code tells the outcome: `0` all good, `1` warnings, `2` failures, `3` terminus error.
+`--problems` hides the findings that are fine, `-v` adds evidence and hints.
+
+The modules, their facts and their checks are described in [docs/modules.md](docs/modules.md).
+
+### Other machines
+
+```shell
+$ terminus remote --sudo srv-01 apps@web-02 -- --only systemd,podman,quadlet
+$ terminus remote --hosts-file hosts.txt --output-dir reports/
+```
+
+terminus copies itself to the hosts through ssh (once per version, `~/.ssh/config` and the agent
+apply) and brings the reports back: see [docs/remote.md](docs/remote.md).
+
+### Verify the monitoring
+
+```shell
+$ sudo terminus probe --unit myapp.service --user apps --http https://app.example.org/health \
+    --check-cmd 'grep -q "myapp.*DOWN" /var/log/easeprobe.log' --wait 60s
+```
+
+stops the service for a while, checks that the endpoint and the monitoring notice, and starts it
+again (also on Ctrl-C). The only command that changes the machine: see [docs/probe.md](docs/probe.md).
 
 ### Print a single fact
 
 ```shell
-$ terminus System.Network.Interfaces.eth0.Ip6Addresses.0.Ip
-fe80::f816:3eff:fead:8549
+$ terminus memory.available_bytes
+16210112512
+$ terminus network.interfaces.eth0.addresses.0.ip
+10.0.2.15
+$ terminus storage.filesystems./.used_ratio
+0.2301
 ```
 
-Using templates:
+Using templates (Go field names):
 
 ```shell
 $ terminus --format 'Machine ID is {{ .System.MachineID }}'
 Machine ID is bab60d34057d4ed7a7f3699ee4d15d26
 ```
 
-### Print all facts
+### Output formats
+
+Also `jsonl`, `markdown`, `html` and `prometheus`: see [docs/output.md](docs/output.md).
+
+
+`-o text` (default) is meant for people: colors are used only on a terminal and can be controlled
+with `--color auto|always|never` or `NO_COLOR`.
+
+`-o json` is meant for programs: the complete report, raw values (bytes, milliseconds), a
+`schema_version`, and the status of every module.
 
 ```shell
-$ terminus
+$ terminus check -o json | jq .summary
 {
-   "System": {
-     "Architecture": "x86_64",
-     "BootID": "87c81966-9e09-4627-b949-6320ae09ecfa",
-     "Date": {
-       "Unix": 1430413811,
-       "UTC": "2015-04-30 17:10:11.736735078 +0000 UTC"
-     },
-     "Domainname": "(none)",
-     "Hostname": "etcd",
-     "Network": {
-       "Interfaces": {
-         "eno16777736": {
-           "Name": "eno16777736",
-           "Index": 2,
-           "HardwareAddr": "00:0c:29:d6:9c:9a",
-           "IpAddresses": [
-             "192.168.12.10/16",
-             "fe80::20c:29ff:fed6:9c9a/64"
-           ],
-           "Ip4Addresses": [
-             {
-               "CIDR": "192.168.12.10/16",
-               "Ip": "192.168.12.10",
-               "Netmask": "255.255.0.0"
-             }
-           ],
-           "Ip6Addresses": [
-             {
-               "CIDR": "fe80::20c:29ff:fed6:9c9a/64",
-               "Ip": "fe80::20c:29ff:fed6:9c9a",
-               "Prefix": 64
-             }
-           ]
-         },
-         "lo": {
-           "Name": "lo",
-           "Index": 1,
-           "HardwareAddr": "",
-           "IpAddresses": [
-             "127.0.0.1/8",
-             "::1/128"
-           ],
-           "Ip4Addresses": [
-             {
-               "CIDR": "127.0.0.1/8",
-               "Ip": "127.0.0.1",
-               "Netmask": "255.0.0.0"
-             }
-           ],
-           "Ip6Addresses": [
-             {
-               "CIDR": "::1/128",
-               "Ip": "::1",
-               "Prefix": 128
-             }
-           ]
-         }
-       }
-     },
-     "Kernel": {
-       "Name": "Linux",
-       "Release": "4.0.0",
-       "Version": "#2 SMP Wed Apr 22 23:43:22 UTC 2015"
-     },
-     "MachineID": "677f2a9b43c343aa993ef4a282ba2f05",
-     "Memory": {
-       "Total": 1029615616,
-       "Free": 683864064,
-       "Shared": 184950784,
-       "Buffered": 23953408
-     },
-     "OSRelease": {
-       "Name": "CoreOS",
-       "ID": "coreos",
-       "PrettyName": "CoreOS 660.0.0",
-       "Version": "660.0.0",
-       "VersionID": "660.0.0"
-     },
-     "Swap": {
-       "Total": 0,
-       "Free": 0
-     },
-     "Uptime": 4927
-   }
- }
+  "ok": 0,
+  "info": 0,
+  "warn": 1,
+  "fail": 0
+}
+$ terminus facts -o json | jq .modules.system.facts.kernel
+{
+  "name": "Linux",
+  "release": "6.8.0",
+  "version": "#1 SMP PREEMPT_DYNAMIC"
+}
 ```
 
 ## Development
 
-Use scripts in `.sdlc/` directory.
+Use the scripts in the `.sdlc/` directory.
 
-- Build: `.sdlc/build`
-- Build distribution files: `.sdlc/build-dist`
-- Run code analysis and tests: `.sdlc/check`
+- Build a static binary in `bin/`: `.sdlc/build`
+- Build distribution archives for linux/amd64 and linux/arm64 in `dist/`: `.sdlc/build-dist`
+- Run format check, vet, staticcheck (if installed), tests and the static build: `.sdlc/check`
 - Update dependencies: `.sdlc/update`

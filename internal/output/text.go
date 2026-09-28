@@ -1,0 +1,418 @@
+package output
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
+
+	"github.com/enr/terminus/internal/model"
+	"github.com/enr/terminus/internal/query"
+)
+
+// Text renders the report for a human at a terminal: summary first, then findings, module
+// statuses and, optionally, the facts.
+type Text struct{}
+
+type styles struct {
+	title, dim, key lipgloss.Style
+	sev             map[model.Severity]lipgloss.Style
+	status          map[model.ModuleStatus]lipgloss.Style
+}
+
+func newStyles(w io.Writer, color bool) styles {
+	lr := lipgloss.NewRenderer(w)
+	if color {
+		lr.SetColorProfile(termenv.ANSI256)
+	} else {
+		lr.SetColorProfile(termenv.Ascii)
+	}
+	fg := func(c string) lipgloss.Style { return lr.NewStyle().Foreground(lipgloss.Color(c)) }
+	green, yellow, red, blue, grey := fg("2"), fg("3"), fg("1"), fg("4"), fg("8")
+	return styles{
+		title: lr.NewStyle().Bold(true),
+		dim:   grey,
+		key:   blue,
+		sev: map[model.Severity]lipgloss.Style{
+			model.SeverityOK:   green,
+			model.SeverityInfo: blue,
+			model.SeverityWarn: yellow.Bold(true),
+			model.SeverityFail: red.Bold(true),
+		},
+		status: map[model.ModuleStatus]lipgloss.Style{
+			model.StatusOK:      green,
+			model.StatusPartial: yellow,
+			model.StatusError:   red,
+			model.StatusSkipped: grey,
+		},
+	}
+}
+
+var severitySymbol = map[model.Severity]string{
+	model.SeverityOK:   "✔",
+	model.SeverityInfo: "ℹ",
+	model.SeverityWarn: "⚠",
+	model.SeverityFail: "✖",
+}
+
+// Render implements Renderer.
+func (Text) Render(w io.Writer, r *model.Report, o Options) error {
+	s := newStyles(w, o.Color)
+	b := &strings.Builder{}
+
+	host := r.Meta.Hostname
+	if host == "" {
+		host = "(unknown host)"
+	}
+	fmt.Fprintf(b, "%s %s\n", s.title.Render(host),
+		s.dim.Render(fmt.Sprintf("· %s · %s", r.Meta.Timestamp.Format(time.RFC3339), humanMillis(r.Meta.DurationMs))))
+	if o.Findings {
+		renderSummary(b, s, r.Summary)
+		renderFindings(b, s, r, o)
+	}
+	renderModules(b, s, r)
+	if o.Facts {
+		renderFacts(b, s, r, o.Verbose)
+	}
+	_, err := io.WriteString(w, b.String())
+	return err
+}
+
+func renderSummary(b *strings.Builder, s styles, sum model.Summary) {
+	fmt.Fprintf(b, "%s  %s  %s  %s\n",
+		s.sev[model.SeverityFail].Render(fmt.Sprintf("%s %d fail", severitySymbol[model.SeverityFail], sum.Fail)),
+		s.sev[model.SeverityWarn].Render(fmt.Sprintf("%s %d warn", severitySymbol[model.SeverityWarn], sum.Warn)),
+		s.sev[model.SeverityInfo].Render(fmt.Sprintf("%s %d info", severitySymbol[model.SeverityInfo], sum.Info)),
+		s.sev[model.SeverityOK].Render(fmt.Sprintf("%s %d ok", severitySymbol[model.SeverityOK], sum.OK)))
+}
+
+func renderFindings(b *strings.Builder, s styles, r *model.Report, o Options) {
+	var shown []model.Finding
+	for _, f := range r.Findings {
+		if o.ProblemsOnly && f.Severity < model.SeverityWarn {
+			continue
+		}
+		shown = append(shown, f)
+	}
+	if len(shown) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "\n%s\n", s.title.Render("Findings"))
+	idWidth := 0
+	for _, f := range shown {
+		idWidth = max(idWidth, len(f.ID))
+	}
+	for _, f := range shown {
+		st := s.sev[f.Severity]
+		label := st.Render(fmt.Sprintf("%s %-4s", severitySymbol[f.Severity], f.Severity))
+		line := fmt.Sprintf("  %s  %s  %s", label, pad(f.ID, idWidth), f.Message)
+		if f.Subject != "" {
+			line += " " + s.dim.Render("["+f.Subject+"]")
+		}
+		b.WriteString(line + "\n")
+		if !o.Verbose {
+			continue
+		}
+		indent := strings.Repeat(" ", 10)
+		if f.Hint != "" {
+			fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render("hint:"), f.Hint)
+		}
+		for _, k := range sortedKeys(f.Evidence) {
+			fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), humanValue(k, f.Evidence[k]))
+		}
+	}
+}
+
+func renderModules(b *strings.Builder, s styles, r *model.Report) {
+	names := r.ModuleNames()
+	if len(names) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "\n%s\n", s.title.Render("Modules"))
+	nameWidth, statusWidth := 0, 0
+	for _, n := range names {
+		nameWidth = max(nameWidth, len(n))
+		statusWidth = max(statusWidth, len(r.Modules[n].Status))
+	}
+	for _, n := range names {
+		m := r.Modules[n]
+		status := s.status[m.Status].Render(pad(string(m.Status), statusWidth))
+		detail := s.dim.Render(humanMillis(m.DurationMs))
+		if m.Status == model.StatusSkipped {
+			detail = s.dim.Render(m.SkipReason)
+		}
+		fmt.Fprintf(b, "  %s  %s  %s\n", pad(n, nameWidth), status, detail)
+		for _, e := range m.Errors {
+			fmt.Fprintf(b, "  %s  %s\n", strings.Repeat(" ", nameWidth), s.status[model.StatusError].Render("↳ "+e))
+		}
+	}
+}
+
+func renderFacts(b *strings.Builder, s styles, r *model.Report, verbose bool) {
+	tree, err := query.Generic(r.FactsTree())
+	if err != nil {
+		fmt.Fprintf(b, "\nfacts not available: %v\n", err)
+		return
+	}
+	root, _ := tree.(map[string]any)
+	if len(root) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "\n%s\n", s.title.Render("Facts"))
+	w := treeWriter{b: b, s: s, verbose: verbose}
+	w.write(root, 1)
+}
+
+// Beyond these sizes lists of values and maps of values are summarized unless verbose.
+const (
+	maxInlineList = 12
+	maxScalarMap  = 25
+)
+
+type treeWriter struct {
+	b       *strings.Builder
+	s       styles
+	verbose bool
+}
+
+// write prints a generic tree as indented "key: value" lines; lists of scalars stay on one line.
+func (w treeWriter) write(v any, depth int) {
+	b, s := w.b, w.s
+	indent := strings.Repeat("  ", depth)
+	switch node := v.(type) {
+	case map[string]any:
+		for _, k := range sortedKeys(node) {
+			child := node[k]
+			if isScalar(child) && !isEmptyMap(child) {
+				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), humanScalar(k, child))
+				continue
+			}
+			if summary, ok := w.summarize(child); ok {
+				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), s.dim.Render(summary))
+				continue
+			}
+			if isScalar(child) || isScalarList(child) {
+				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), scalarString(child))
+				continue
+			}
+			fmt.Fprintf(b, "%s%s\n", indent, s.key.Render(k+":"))
+			w.write(child, depth+1)
+		}
+	case []any:
+		for i, child := range node {
+			if isScalar(child) {
+				fmt.Fprintf(b, "%s- %s\n", indent, scalarString(child))
+				continue
+			}
+			fmt.Fprintf(b, "%s%s\n", indent, s.dim.Render(fmt.Sprintf("[%d]", i)))
+			w.write(child, depth+1)
+		}
+	default:
+		fmt.Fprintf(b, "%s%s\n", indent, scalarString(v))
+	}
+}
+
+// isScalar reports whether v fits on one line; empty maps and lists do.
+func isScalar(v any) bool {
+	switch t := v.(type) {
+	case map[string]any:
+		return len(t) == 0
+	case []any:
+		return false
+	}
+	return true
+}
+
+// summarize replaces long lists of values and big maps of values (raw tables such as meminfo)
+// with their size, unless verbose.
+func (w treeWriter) summarize(v any) (string, bool) {
+	if w.verbose {
+		return "", false
+	}
+	switch t := v.(type) {
+	case []any:
+		if len(t) > maxInlineList && isScalarList(t) {
+			return fmt.Sprintf("(%d items, -v to show)", len(t)), true
+		}
+	case map[string]any:
+		if len(t) > maxScalarMap {
+			for _, c := range t {
+				if !isScalar(c) {
+					return "", false
+				}
+			}
+			return fmt.Sprintf("(%d entries, -v to show)", len(t)), true
+		}
+	}
+	return "", false
+}
+
+func isEmptyMap(v any) bool {
+	m, ok := v.(map[string]any)
+	return ok && len(m) == 0
+}
+
+// humanScalar formats a fact value, humanizing sizes, ratios and durations by key.
+func humanScalar(key string, v any) string {
+	if _, isString := v.(string); isString || v == nil {
+		return scalarString(v)
+	}
+	return humanValue(key, v)
+}
+
+func isScalarList(v any) bool {
+	l, ok := v.([]any)
+	if !ok {
+		return false
+	}
+	for _, e := range l {
+		if !isScalar(e) {
+			return false
+		}
+	}
+	return true
+}
+
+func scalarString(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return "-"
+	case map[string]any:
+		return "{}"
+	case string:
+		if t == "" {
+			return `""`
+		}
+		return t
+	case []any:
+		parts := make([]string, len(t))
+		for i, e := range t {
+			parts[i] = scalarString(e)
+		}
+		return "[" + strings.Join(parts, ", ") + "]"
+	default:
+		return fmt.Sprint(t)
+	}
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func pad(s string, width int) string {
+	if len(s) >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-len(s))
+}
+
+// humanValue formats values by key suffix: _bytes in binary units, _ratio as a percentage,
+// _seconds as a duration.
+func humanValue(key string, v any) string {
+	switch {
+	case strings.HasSuffix(key, "_bytes"):
+		if n, ok := toUint(v); ok {
+			return fmt.Sprintf("%s (%d)", HumanBytes(n), n)
+		}
+	case strings.HasSuffix(key, "_ratio"):
+		if f, ok := toFloat(v); ok {
+			return fmt.Sprintf("%.1f%%", f*100)
+		}
+	case strings.HasSuffix(key, "_seconds"):
+		if f, ok := toFloat(v); ok {
+			return HumanDuration(time.Duration(f * float64(time.Second)))
+		}
+	}
+	if n, ok := v.(json.Number); ok {
+		v = numberValue(n)
+	}
+	if f, ok := v.(float64); ok {
+		return fmt.Sprintf("%.3g", f)
+	}
+	return fmt.Sprint(v)
+}
+
+func numberValue(n json.Number) any {
+	if i, err := n.Int64(); err == nil {
+		return i
+	}
+	if f, err := n.Float64(); err == nil {
+		return f
+	}
+	return n.String()
+}
+
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case json.Number:
+		f, err := n.Float64()
+		return f, err == nil
+	}
+	if u, ok := toUint(v); ok {
+		return float64(u), true
+	}
+	return 0, false
+}
+
+func toUint(v any) (uint64, bool) {
+	if n, ok := v.(json.Number); ok {
+		v = numberValue(n)
+	}
+	switch n := v.(type) {
+	case uint64:
+		return n, true
+	case int64:
+		return uint64(n), n >= 0
+	case int:
+		return uint64(n), n >= 0
+	case float64:
+		return uint64(n), n >= 0
+	}
+	return 0, false
+}
+
+// HumanBytes formats a size with binary units: 3.8 GiB.
+func HumanBytes(n uint64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := uint64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
+}
+
+func humanMillis(ms int64) string {
+	return HumanDuration(time.Duration(ms) * time.Millisecond)
+}
+
+// HumanDuration formats a duration compactly: 850ms, 12.3s, 5m10s, 2d4h.
+func HumanDuration(d time.Duration) string {
+	switch {
+	case d < time.Second:
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	case d < time.Minute:
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	case d < time.Hour:
+		return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60)
+	default:
+		return fmt.Sprintf("%dd%dh", int(d.Hours())/24, int(d.Hours())%24)
+	}
+}

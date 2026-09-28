@@ -1,0 +1,5 @@
+[
+    {"Type":"Images","Total":1,"Active":1,"RawSize":8104044,"RawReclaimable":0,"TotalCount":1,"Size":"8.104MB","Reclaimable":"0B (0%)"},
+    {"Type":"Containers","Total":3,"Active":2,"RawSize":35504,"RawReclaimable":11790,"TotalCount":3,"Size":"35.5kB","Reclaimable":"11.79kB (33%)"},
+    {"Type":"Local Volumes","Total":2,"Active":1,"RawSize":0,"RawReclaimable":0,"TotalCount":2,"Size":"0B","Reclaimable":"0B (0%)"}
+]

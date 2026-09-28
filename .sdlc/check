@@ -8,66 +8,39 @@ SDLC_DIR="$( cd -P "$( dirname "$TOOL_SOURCE" )" && pwd )"
 PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
 
 source "${SDLC_DIR}/config"
-app_name="${REPO_NAME}"
-
-LIB_DIR="${PRJ_HOME}/lib"
-CMDS_DIR="${PRJ_HOME}/cmd"
-
-BIN_DIR="${PRJ_HOME}/bin"
-[[ -d "${BIN_DIR}" ]] && rm -r "${BIN_DIR}"
-
-hash golint 2>/dev/null || {
-  go get -u golang.org/x/lint
-}
-
-hash goimports 2>/dev/null || {
-  go get golang.org/x/tools/cmd/goimports
-}
 
 cd "${PRJ_HOME}"
 
-# TODO: add https://github.com/fzipp/gocyclo
+echo "--- gofmt"
+unformatted="$(gofmt -l cmd internal)"
+[[ -z "$unformatted" ]] || {
+  echo "files not formatted:"
+  echo "$unformatted"
+  exit 1
+}
 
-for dir in $(find "$LIB_DIR" -mindepth 1 -maxdepth 1 -type d); do
-  app_name=$(basename "$dir")
-  echo "===  Process lib ${app_name} [${dir}]"
-  cd "$dir"
-  echo "--- golint"
-  diff <(golint ./...) <(printf "")
-  echo "--- go fmt"
-  go fmt ./...
-  echo "--- go vet"
-  go vet ./...
-  echo "--- goimports"
-  goimports -w .
-  diff <(goimports -d .) <(printf "")
-  cd "$PRJ_HOME"
-  echo "--- go build"
-  cd "$dir"
-  echo "--- go test -cover ./..."
-  go test -cover ./...
+echo "--- go mod tidy"
+go mod tidy -diff
+
+echo "--- go vet"
+go vet ./...
+
+if command -v staticcheck >/dev/null; then
+  echo "--- staticcheck"
+  staticcheck ./...
+else
+  echo "--- staticcheck not installed, skipped (go install honnef.co/go/tools/cmd/staticcheck@latest)"
+fi
+
+echo "--- go test"
+CGO_ENABLED=1 go test -race -cover ./... 2>/dev/null || go test -cover ./...
+
+echo "--- static build"
+"${SDLC_DIR}/build"
+for bin in "${PRJ_HOME}"/bin/*; do
+  file "$bin" | grep -q "statically linked" || {
+    echo "not a static binary: $(file "$bin")"
+    exit 1
+  }
 done
-
-cd "${PRJ_HOME}"
-
-for dir in $(find "$CMDS_DIR" -mindepth 1 -maxdepth 1 -type d); do
-  app_name=$(basename "$dir")
-  echo "===  Process cmd ${app_name} [${dir}]"
-  cd "$dir"
-  echo "--- golint"
-  diff <(golint ./...) <(printf "")
-  echo "--- go fmt"
-  go fmt ./...
-  echo "--- go vet"
-  go vet ./...
-  echo "--- goimports"
-  goimports -w .
-  diff <(goimports -d .) <(printf "")
-  cd "$PRJ_HOME"
-  echo "--- go build"
-  # we need binaries for some e2e test
-  go build -o "${BIN_DIR}/${app_name}" "${REPO_HOST}/${REPO_OWNER}/${REPO_NAME}/cmd/${app_name}"
-  cd "$dir"
-  echo "--- go test -cover ./..."
-  go test -cover ./...
-done
+echo "ok"

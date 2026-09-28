@@ -1,0 +1,30 @@
+[
+     {
+          "Name": "pgdata",
+          "Driver": "local",
+          "Mountpoint": "/var/lib/containers/storage/volumes/pgdata/_data",
+          "CreatedAt": "2026-09-28T12:15:08.477837193Z",
+          "Labels": {},
+          "Scope": "local",
+          "Options": {},
+          "MountCount": 0,
+          "NeedsCopyUp": true,
+          "NeedsChown": true,
+          "LockNumber": 0
+     },
+     {
+          "Name": "pgdata-vol",
+          "Driver": "local",
+          "Mountpoint": "/var/lib/containers/storage/volumes/pgdata-vol/_data",
+          "CreatedAt": "2026-09-28T12:15:08.504045673Z",
+          "Labels": {
+               "app": "x"
+          },
+          "Scope": "local",
+          "Options": {},
+          "MountCount": 0,
+          "NeedsCopyUp": true,
+          "NeedsChown": true,
+          "LockNumber": 1
+     }
+]

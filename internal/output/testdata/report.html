@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>terminus report: srv-01</title>
+<style>
+:root { --bg: #fff; --fg: #1f2328; --muted: #656d76; --line: #d0d7de; --head: #f6f8fa;
+  --ok: #1a7f37; --info: #0969da; --warn: #9a6700; --fail: #cf222e; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --head: #161b22;
+    --ok: #3fb950; --info: #58a6ff; --warn: #d29922; --fail: #f85149; }
+}
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 24px 16px; }
+main { max-width: 1100px; margin: 0 auto; }
+h1 { font-size: 1.6em; margin: 0 0 4px; } h2 { font-size: 1.2em; margin-top: 32px; }
+.meta { color: var(--muted); margin-bottom: 16px; }
+.summary span { display: inline-block; margin-right: 16px; font-weight: 600; }
+table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: var(--head); }
+code, pre { font: 13px/1.4 ui-monospace, monospace; }
+pre { background: var(--head); padding: 12px; overflow-x: auto; border-radius: 6px; }
+.ok { color: var(--ok); } .info { color: var(--info); } .warn { color: var(--warn); } .fail { color: var(--fail); }
+.sev, td code { white-space: nowrap; } .sev { font-weight: 600; }
+.hint { color: var(--muted); }
+details { margin: 8px 0; } summary { cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+<h1>terminus report: srv-01</h1>
+<div class="meta">2026-09-28T10:00:00Z · terminus 0.2.0-test · 123ms</div>
+<div class="summary">
+<span class="fail">✖ 1 fail</span><span class="warn">⚠ 1 warn</span><span class="info">ℹ 1 info</span><span class="ok">✔ 1 ok</span>
+</div>
+<h2>Findings</h2>
+<table>
+<tr><th>Severity</th><th>Check</th><th>Subject</th><th>Message</th></tr>
+<tr><td class="sev fail">✖ fail</td><td><code>unit.failed</code></td><td>backup.service</td><td>unit is failed</td></tr>
+<tr><td class="sev warn">⚠ warn</td><td><code>mem.available-low</code></td><td>memory</td><td>only 7.3% of memory available<br><span class="hint">check memory usage</span></td></tr>
+<tr><td class="sev info">ℹ info</td><td><code>ext.escape</code></td><td>a|b &lt;x&gt; &#34;q&#34; \ z</td><td>line1
+line2 &lt;b&gt;&amp;&lt;/b&gt;</td></tr>
+<tr><td class="sev ok">✔ ok</td><td><code>disk.usage</code></td><td>/</td><td>42% used</td></tr>
+</table>
+<h2>Modules</h2>
+<table>
+<tr><th>Module</th><th>Status</th><th>Duration</th><th>Notes</th></tr>
+<tr><td>external</td><td>skipped</td><td>0ms</td><td>directory /etc/terminus/facts.d does not exist<br></td></tr>
+<tr><td>podman</td><td>partial</td><td>1.5s</td><td>volume inspect: permission denied<br></td></tr>
+<tr><td>system</td><td>ok</td><td>12ms</td><td></td></tr>
+</table>
+<h2>Facts</h2>
+<details><summary>podman</summary><pre>{}</pre></details>
+<details><summary>system</summary><pre>{
+  &#34;disks&#34;: [
+    {
+      &#34;device&#34;: &#34;sda&#34;
+    }
+  ],
+  &#34;flags&#34;: [
+    &#34;fpu&#34;,
+    &#34;sse&#34;
+  ],
+  &#34;hostname&#34;: &#34;srv-01&#34;,
+  &#34;long&#34;: [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  &#34;memory&#34;: {
+    &#34;available_ratio&#34;: 0.0732,
+    &#34;total_bytes&#34;: 4294967296
+  },
+  &#34;uptime_seconds&#34;: 187200.5
+}</pre></details>
+</main>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# HELP terminus_finding_severity Severity of each finding: 0 ok, 1 info, 2 warn, 3 fail.
+# TYPE terminus_finding_severity gauge
+terminus_finding_severity{id="unit.failed",module="systemd",subject="backup.service"} 3
+terminus_finding_severity{id="mem.available-low",module="system",subject="memory"} 2
+terminus_finding_severity{id="ext.escape",module="ext",subject="a|b <x> \"q\" \\ z"} 1
+terminus_finding_severity{id="disk.usage",module="system",subject="/"} 0
+# HELP terminus_findings Number of findings by severity.
+# TYPE terminus_findings gauge
+terminus_findings{severity="ok"} 1
+terminus_findings{severity="info"} 1
+terminus_findings{severity="warn"} 1
+terminus_findings{severity="fail"} 1
+# HELP terminus_module_up 1 when the module collected its facts (ok or partial), 0 otherwise.
+# TYPE terminus_module_up gauge
+terminus_module_up{module="external",status="skipped"} 0
+terminus_module_up{module="podman",status="partial"} 1
+terminus_module_up{module="system",status="ok"} 1
+# HELP terminus_module_duration_seconds Time spent collecting the facts of the module.
+# TYPE terminus_module_duration_seconds gauge
+terminus_module_duration_seconds{module="external"} 0
+terminus_module_duration_seconds{module="podman"} 1.5
+terminus_module_duration_seconds{module="system"} 0.012
+# HELP terminus_exit_code Exit code of the run: 0 ok, 1 warn, 2 fail.
+# TYPE terminus_exit_code gauge
+terminus_exit_code 2
+# HELP terminus_last_run_timestamp_seconds Time of the run.
+# TYPE terminus_last_run_timestamp_seconds gauge
+terminus_last_run_timestamp_seconds 1790589600
+# HELP terminus_run_duration_seconds Duration of the run.
+# TYPE terminus_run_duration_seconds gauge
+terminus_run_duration_seconds 0.123

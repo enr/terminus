@@ -1,14 +1,16 @@
 # Terminus API
 
-To enable the terminus HTTP API use the `-http` flag.
+To enable the terminus HTTP API use `terminus serve --http` (the v1 form `terminus -http` still works).
 
 ## Usage
 
 ### Server
 
 ```shell
-$ terminus -http=":8080"
+$ terminus serve --http ":8080"
 ```
+
+The server runs the core modules on every request.
 
 ### Client
 
@@ -22,4 +24,15 @@ $ curl http://$SERVER_IP:8080/facts
 
 ```shell
 $ curl http://$SERVER_IP:8080/facts -d 'System.MachineID'
+```
+
+A path that does not exist returns `404`.
+
+#### Get the complete report
+
+Facts, module statuses and the findings of the checks, in the same JSON format as
+`terminus check -o json`:
+
+```shell
+$ curl http://$SERVER_IP:8080/report | jq .summary
 ```

@@ -1,0 +1,5 @@
+quadlet-generator[1738]: Loading source unit file /tmp/claude-0/cap/q/app.network
+quadlet-generator[1738]: Loading source unit file /tmp/claude-0/cap/q/broken.container
+quadlet-generator[1738]: Loading source unit file /tmp/claude-0/cap/q/db.container
+quadlet-generator[1738]: Loading source unit file /tmp/claude-0/cap/q/pgdata.volume
+quadlet-generator[1738]: converting "broken.container": unsupported key 'Imagee' in group 'Container' in /tmp/claude-0/cap/q/broken.container

@@ -2,6 +2,23 @@ REPO_HOST='github.com'
 REPO_OWNER='enr'
 REPO_NAME='terminus'
 DIST_DIR='dist'
-GOPROXY='off'
 
-APP_VERSION='0.1.2-dev' # APP_VERSION_AUTOLINE this line is automatically managed
+APP_VERSION='0.2.0-dev' # APP_VERSION_AUTOLINE this line is automatically managed
+
+MODULE="${REPO_HOST}/${REPO_OWNER}/${REPO_NAME}"
+
+# Static binaries: no cgo, no dependency on the build machine paths.
+export CGO_ENABLED=0
+GO_BUILD_FLAGS=(-trimpath)
+
+# go_ldflags prints the linker flags that strip the binary and embed the build information.
+go_ldflags() {
+  local buildtime git_hash git_dirty
+  buildtime=$(TZ=UTC date -u '+%Y-%m-%dT%H:%M:%SZ')
+  git_hash="$(git rev-parse HEAD)"
+  git_dirty="$(test -n "$(git status --porcelain)" && echo "+CHANGES" || true)"
+  echo "-s -w \
+-X ${MODULE}/internal/buildinfo.Version=${APP_VERSION} \
+-X ${MODULE}/internal/buildinfo.BuildTime=${buildtime} \
+-X ${MODULE}/internal/buildinfo.GitCommit=${git_hash}${git_dirty}"
+}
