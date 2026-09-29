@@ -184,3 +184,15 @@ func TestParseHostQuoteAndHostsFile(t *testing.T) {
 		t.Errorf("hosts file: %v %v", h, err)
 	}
 }
+
+func TestSSHConfigFile(t *testing.T) {
+	o := Options{SSH: "ssh", SSHConfig: "/tmp/ssh_config"}
+	got := strings.Join(o.ssh(target{dest: "h", port: "22"}, "true", nil).Args, " ")
+	want := "-F /tmp/ssh_config -o BatchMode=yes -o ConnectTimeout=15 -p 22 -- h true"
+	if got != want {
+		t.Errorf("args = %q, want %q", got, want)
+	}
+	if got := strings.Join(Options{SSH: "ssh"}.ssh(target{dest: "h"}, "true", nil).Args, " "); strings.Contains(got, "-F") {
+		t.Errorf("no -F expected: %q", got)
+	}
+}

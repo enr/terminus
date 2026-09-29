@@ -40,7 +40,8 @@ hosts known beforehand (`ssh HOST true` once).
 
 A host is anything ssh accepts, with an optional port: `srv-01`, `apps@web-02`, `web-03:2222`,
 `[2001:db8::1]:2222`. More ssh options with `--ssh-option` (as `ssh -o`, repeatable), another
-client with `--ssh`.
+client with `--ssh`, another configuration file with `--ssh-config PATH` (as `ssh -F`: it replaces
+`~/.ssh/config`, so a project can keep its own aliases and keys).
 
 `--hosts-file` reads one host per line; blank lines and `#` comments are ignored.
 

@@ -67,7 +67,8 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
 - `terminus serve`: `POST /facts` as before, plus `GET /report`.
 - `terminus remote`: runs terminus on other machines through the system ssh client (the binary is
   copied once per version and architecture), shows the reports together, saves them with
-  `--output-dir` for `terminus diff` (docs/remote.md).
+  `--output-dir` for `terminus diff` (docs/remote.md); `--ssh-config` selects the ssh
+  configuration file.
 - `terminus probe`: stops a unit or a container on purpose to verify that the endpoint and the
   monitoring notice the outage, and always starts it again (docs/probe.md).
 - Optional `tls` module: certificates in files (certbot, Caddy storage, configured paths) and

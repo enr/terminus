@@ -101,6 +101,7 @@ Exit code: the worst among the hosts; 3 when a host cannot be reached or fails.`
 	f.StringVar(&o.BinariesDir, "binaries-dir", "", "directory with terminus-linux-<arch> for other architectures")
 	f.StringVar(&o.RemoteConfig, "remote-config", "", "copy this terminus.toml to the hosts and use it")
 	f.StringVar(&o.SSH, "ssh", "ssh", "ssh client")
+	f.StringVar(&o.SSHConfig, "ssh-config", "", "ssh configuration file to use instead of ~/.ssh/config (ssh -F)")
 	f.StringArrayVar(&o.SSHOptions, "ssh-option", nil, "ssh option, as for ssh -o (repeatable)")
 	f.IntVar(&o.Parallel, "parallel", 4, "hosts processed at the same time")
 	f.DurationVar(&o.Timeout, "host-timeout", 5*time.Minute, "maximum time for each host")

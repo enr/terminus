@@ -33,6 +33,8 @@ type Options struct {
 	// SSH is the ssh client (default "ssh"); SSHOptions are passed as -o options.
 	SSH        string
 	SSHOptions []string
+	// SSHConfig is an ssh configuration file used instead of ~/.ssh/config (ssh -F).
+	SSHConfig string
 	// Sudo runs the remote terminus with sudo -n (non interactive).
 	Sudo bool
 	// RemoteBinary is a terminus already installed on the hosts: nothing is copied.
@@ -134,7 +136,11 @@ func parseHost(h string) (target, error) {
 
 // ssh builds an ssh command running a shell command line on the host.
 func (o Options) ssh(t target, command string, stdin io.Reader) runner.Cmd {
-	args := []string{"-o", "BatchMode=yes", "-o", "ConnectTimeout=15"}
+	var args []string
+	if o.SSHConfig != "" {
+		args = append(args, "-F", o.SSHConfig)
+	}
+	args = append(args, "-o", "BatchMode=yes", "-o", "ConnectTimeout=15")
 	for _, opt := range o.SSHOptions {
 		args = append(args, "-o", opt)
 	}
