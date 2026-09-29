@@ -132,6 +132,13 @@ func (*Module) Description() string {
 	return "quadlet files: what the generator really produces, generated unit states, volumes and networks really used"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"scopes.files": {Columns: []string{"name", "kind", "service", "active=state.active", "sub=state.sub", "image", "diagnostics"}},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return false }
 

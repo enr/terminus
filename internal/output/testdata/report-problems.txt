@@ -5,8 +5,7 @@ Findings
   ✖ fail  unit.failed        unit is failed [backup.service]
   ⚠ warn  mem.available-low  only 7.3% of memory available [memory]
 
-Modules
+Modules  1 ok · 1 partial · 1 skipped
   external  skipped  directory /etc/terminus/facts.d does not exist
   podman    partial  1.5s
             ↳ volume inspect: permission denied
-  system    ok       12ms

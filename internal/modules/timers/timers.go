@@ -107,6 +107,13 @@ func (*Module) Description() string {
 	return "systemd timers of the system and user managers: schedule, last and next run, result"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"managers.timers": {Columns: []string{"name", "active", "schedule", "last_run", "next_run", "unit=unit.name", "result=unit.result"}},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return false }
 

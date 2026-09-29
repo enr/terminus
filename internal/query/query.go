@@ -34,48 +34,60 @@ func Generic(v any) (any, error) {
 // Map keys match exactly or, failing that, case-insensitively; numeric segments index lists,
 // other segments select the list element with that name (see listKeys).
 func Resolve(tree any, path string) (any, bool) {
+	v, _, ok := ResolveSchema(tree, path)
+	return v, ok
+}
+
+// ResolveSchema is Resolve that also returns the schema path of the value: the map keys walked,
+// spelled as in the tree, without the list selections (network.interfaces.eth0.addresses gives
+// network.interfaces.addresses). It names what the value is rather than which one it is.
+func ResolveSchema(tree any, path string) (any, string, bool) {
 	if path == "" {
-		return tree, true
+		return tree, "", true
 	}
 	segments := strings.Split(path, ".")
-	if v, ok := walk(tree, segments); ok {
-		return v, true
+	if v, keys, ok := walk(tree, segments); ok {
+		return v, strings.Join(keys, "."), true
 	}
 	if root, ok := tree.(map[string]any); ok {
 		if ext, ok := lookup(root, ExternalModule); ok {
-			return walk(ext, segments)
+			if v, keys, ok := walk(ext, segments); ok {
+				return v, strings.Join(append([]string{ExternalModule}, keys...), "."), true
+			}
 		}
 	}
-	return nil, false
+	return nil, "", false
 }
 
-func walk(v any, segments []string) (any, bool) {
+func walk(v any, segments []string) (any, []string, bool) {
+	var keys []string
 	for _, s := range segments {
 		switch node := v.(type) {
 		case map[string]any:
-			next, ok := lookup(node, s)
+			k, ok := lookupKey(node, s)
 			if !ok {
-				return nil, false
+				return nil, nil, false
 			}
-			v = next
+			v = node[k]
+			keys = append(keys, k)
 		case []any:
 			if i, err := strconv.Atoi(s); err == nil {
 				if i < 0 || i >= len(node) {
-					return nil, false
+					return nil, nil, false
 				}
 				v = node[i]
 				continue
 			}
 			next, ok := findByKey(node, s)
 			if !ok {
-				return nil, false
+				return nil, nil, false
 			}
 			v = next
 		default:
-			return nil, false
+			return nil, nil, false
 		}
 	}
-	return v, true
+	return v, keys, true
 }
 
 // listKeys are the fields that identify an element of a list: a non-numeric path segment selects
@@ -97,16 +109,37 @@ func findByKey(list []any, value string) (any, bool) {
 	return nil, false
 }
 
-func lookup(m map[string]any, key string) (any, bool) {
-	if v, ok := m[key]; ok {
-		return v, true
-	}
-	for k, v := range m {
-		if strings.EqualFold(k, key) {
-			return v, true
+// ItemKey returns the field that names a list element, and its value: eth0 for an interface,
+// /srv for a filesystem. ok is false when the element has none. The value selects the element
+// in a path unless it contains a dot.
+func ItemKey(m map[string]any) (field, value string, ok bool) {
+	for _, k := range listKeys {
+		if s, isString := m[k].(string); isString && s != "" {
+			return k, s, true
 		}
 	}
-	return nil, false
+	return "", "", false
+}
+
+func lookup(m map[string]any, key string) (any, bool) {
+	k, ok := lookupKey(m, key)
+	if !ok {
+		return nil, false
+	}
+	return m[k], true
+}
+
+// lookupKey returns the key of m that matches key: exactly or, failing that, case-insensitively.
+func lookupKey(m map[string]any, key string) (string, bool) {
+	if _, ok := m[key]; ok {
+		return key, true
+	}
+	for k := range m {
+		if strings.EqualFold(k, key) {
+			return k, true
+		}
+	}
+	return "", false
 }
 
 // Format renders a resolved value: maps and lists as indented JSON, scalars as plain text.

@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/enr/terminus/internal/model"
+	"github.com/enr/terminus/internal/module"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -143,6 +145,85 @@ func TestHumanize(t *testing.T) {
 	for d, want := range durCases {
 		if got := HumanDuration(d); got != want {
 			t.Errorf("HumanDuration(%s) = %s, want %s", d, got, want)
+		}
+	}
+}
+
+// tablesReport has lists of records: declared columns, nested lists, records without a name.
+func tablesReport() *model.Report {
+	r := model.NewReport()
+	r.Meta = model.Meta{Hostname: "srv-01", Timestamp: time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)}
+	r.Modules["network"] = model.ModuleResult{Name: "network", Status: model.StatusOK, Facts: map[string]any{
+		"interfaces": []map[string]any{
+			{"name": "lo", "mtu": 65536, "addresses": []map[string]any{{"cidr": "127.0.0.1/8"}, {"cidr": "::1/128"}},
+				"stats": map[string]any{"rx_bytes": 2048}},
+			{"name": "eth0", "mtu": 1500, "addresses": []map[string]any{{"cidr": "10.0.0.2/24"}},
+				"stats": map[string]any{"rx_bytes": uint64(3 << 30)}, "error": ""},
+			{"name": "veth1", "mtu": 1500, "up": false},
+			{"name": "veth2", "mtu": 1500, "up": false},
+			{"name": "veth3", "mtu": 1500, "up": true},
+		},
+		"pressure": map[string]any{"some": map[string]any{"avg10": 0, "total_us": 0}, "full": map[string]any{"avg10": 0.0}},
+		"routes":   []map[string]any{{"gateway": "10.0.0.1", "metric": 0, "flags": []string{"up", "gw"}, "stats": map[string]any{"uses": 1}}},
+	}}
+	r.Modules["systemd"] = model.ModuleResult{Name: "systemd", Status: model.StatusOK, Facts: map[string]any{
+		"managers": []map[string]any{{"name": "system", "units": []map[string]any{
+			{"name": "sshd.service", "active": "active", "restarts": 0, "io_ms": 1500, "load": 0.04},
+			{"name": "backup.service", "active": "failed", "restarts": 3, "io_ms": 12, "load": 2800.0},
+		}}},
+	}}
+	return r
+}
+
+var tablesColumns = map[string]module.Table{
+	"network.interfaces": {
+		Columns: []string{"name", "addresses=addresses.cidr", "mtu", "rx=stats.rx_bytes", "error"},
+		Minor:   []map[string]string{{"name": "veth*", "up": "false"}},
+	},
+}
+
+func TestTextTables(t *testing.T) {
+	render := func(o Options) []byte {
+		var buf bytes.Buffer
+		if err := (Text{}).Render(&buf, tablesReport(), o); err != nil {
+			t.Fatal(err)
+		}
+		return buf.Bytes()
+	}
+	golden(t, "facts-tables.txt", render(Options{Facts: true, Tables: tablesColumns}))
+	golden(t, "facts-tables-narrow.txt", render(Options{Facts: true, Tables: tablesColumns, Width: 30}))
+	golden(t, "facts-tables-verbose.txt", render(Options{Facts: true, Tables: tablesColumns, Verbose: true}))
+}
+
+func TestRenderFactsValue(t *testing.T) {
+	var buf bytes.Buffer
+	v := []any{map[string]any{"cidr": "10.0.0.2/24", "prefix": json.Number("24")}}
+	if err := RenderFactsValue(&buf, "network.interfaces.eth0.addresses", "network.interfaces.addresses", v, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	want := "CIDR         PREFIX\n10.0.0.2/24      24\n"
+	if buf.String() != want {
+		t.Errorf("got\n%s\nwant\n%s", buf.String(), want)
+	}
+}
+
+func TestHumanValue(t *testing.T) {
+	cases := []struct {
+		key  string
+		v    any
+		want string
+	}{
+		{"mhz", 2799.998, "2799.998"},
+		{"mhz", 2800.0, "2800"},
+		{"avg", 0.0425, "0.043"},
+		{"avg", json.Number("16.83"), "16.83"},
+		{"io_time_ms", json.Number("3804"), "3.8s"},
+		{"total_us", json.Number("12864225"), "12.9s"},
+		{"size_bytes", uint64(2048), "2.0 KiB (2048)"},
+	}
+	for _, c := range cases {
+		if got := humanValue(c.key, c.v); got != c.want {
+			t.Errorf("humanValue(%s, %v) = %s, want %s", c.key, c.v, got, c.want)
 		}
 	}
 }

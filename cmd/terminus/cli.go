@@ -13,11 +13,13 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/enr/terminus/internal/buildinfo"
 	"github.com/enr/terminus/internal/config"
 	"github.com/enr/terminus/internal/engine"
 	"github.com/enr/terminus/internal/model"
+	"github.com/enr/terminus/internal/module"
 	"github.com/enr/terminus/internal/modules/external"
 	"github.com/enr/terminus/internal/modules/system"
 	"github.com/enr/terminus/internal/output"
@@ -36,6 +38,7 @@ type globalOptions struct {
 	enable           []string
 	disable          []string
 	users            []string
+	noPager          bool
 	// changed tells whether a flag was set on the command line (flags win over the configuration).
 	changed func(name string) bool
 }
@@ -115,6 +118,7 @@ Without a subcommand it behaves like "terminus facts", as terminus v1 did.`,
 	pf.StringSliceVar(&g.only, "only", nil, "run only these modules")
 	pf.StringSliceVar(&g.enable, "modules", nil, "enable these modules too")
 	pf.StringSliceVar(&g.disable, "no-modules", nil, "disable these modules")
+	pf.BoolVar(&g.noPager, "no-pager", false, "do not page long output on a terminal (pager: $TERMINUS_PAGER, $PAGER or less)")
 	pf.StringSliceVar(&g.users, "users", nil, "users inspected by systemd, podman, quadlet and timers (default from the configuration: auto)")
 
 	// Defined here to keep -v free: subcommands use it for --verbose.
@@ -195,8 +199,21 @@ func renderOptions(g *globalOptions, stdout io.Writer) (output.Options, error) {
 		return o, nil
 	}
 	color, err := output.UseColor(output.ColorMode(g.color), f)
-	o.Color = color
+	o.Color, o.Width = color, terminalWidth(f)
 	return o, err
+}
+
+// terminalWidth returns the width of w when it is a terminal, 0 otherwise.
+func terminalWidth(w io.Writer) int {
+	f, ok := w.(*os.File)
+	if !ok || !term.IsTerminal(int(f.Fd())) {
+		return 0
+	}
+	width, _, err := term.GetSize(int(f.Fd()))
+	if err != nil {
+		return 0
+	}
+	return width
 }
 
 type factsOptions struct {
@@ -223,10 +240,17 @@ func newFactsCmd(g *globalOptions, stdout, stderr io.Writer) *cobra.Command {
 		Short: "Print the facts about the machine",
 		Long: `Print the facts about the machine.
 
-With a path (e.g. System.Memory.Total) only that value is printed.`,
+Lists of records (interfaces, filesystems, units ...) are shown as tables of their main
+fields; -v shows every field.
+
+With a path only that value is printed: a section as text on a terminal and as JSON otherwise
+(-o json or -o text to choose), a single value as is. Elements of lists are selected by name
+(network.interfaces.eth0, storage.filesystems./srv) or by position.`,
 		Example: `  terminus facts
   terminus facts -o json
-  terminus facts System.Kernel.Release
+  terminus facts storage
+  terminus facts network.interfaces.eth0
+  terminus facts system.kernel.release
   terminus facts --format 'Machine ID is {{ .System.MachineID }}'`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -259,9 +283,17 @@ func runFacts(ctx context.Context, g *globalOptions, fo *factsOptions, args []st
 		if err != nil {
 			return err
 		}
-		v, ok := query.Resolve(tree, args[0])
+		v, schema, ok := query.ResolveSchema(tree, args[0])
 		if !ok {
 			return &exitError{code: model.ExitError, err: fmt.Errorf("fact %q not found", args[0])}
+		}
+		if factsValueAsText(g, fo, stdout, v) {
+			o, err := renderOptions(g, stdout)
+			if err != nil {
+				return err
+			}
+			o.Verbose, o.Tables = fo.verbose, module.Tables(a.reg.All())
+			return page(g, stdout, func(w io.Writer) error { return output.RenderFactsValue(w, args[0], schema, v, o) })
 		}
 		s, err := query.Format(v)
 		if err != nil {
@@ -275,11 +307,28 @@ func runFacts(ctx context.Context, g *globalOptions, fo *factsOptions, args []st
 	if err != nil {
 		return err
 	}
-	o.Facts, o.Verbose = true, fo.verbose
+	o.Facts, o.Verbose, o.Tables = true, fo.verbose, module.Tables(a.reg.All())
 	if fo.outputFile != "" {
-		o.Color = false
+		o.Color, o.Width = false, 0
+		return writeOutput(fo.outputFile, stdout, func(w io.Writer) error { return renderer.Render(w, r, o) })
 	}
-	return writeOutput(fo.outputFile, stdout, func(w io.Writer) error { return renderer.Render(w, r, o) })
+	return page(g, stdout, func(w io.Writer) error { return renderer.Render(w, r, o) })
+}
+
+// factsValueAsText tells whether a section of the facts is printed as text rather than JSON:
+// when asked with -o text, or on a terminal unless another format is asked. Single values are
+// printed as they are, for scripts.
+func factsValueAsText(g *globalOptions, fo *factsOptions, stdout io.Writer, v any) bool {
+	switch v.(type) {
+	case map[string]any, []any:
+	default:
+		return false
+	}
+	if g.changed != nil && g.changed("output") {
+		return fo.output == "text"
+	}
+	f, ok := stdout.(*os.File)
+	return ok && term.IsTerminal(int(f.Fd()))
 }
 
 // templateData is what templates see: facts keyed by module name, plus the names used by
@@ -390,11 +439,16 @@ func runCheck(cmd *cobra.Command, g *globalOptions, co *checkOptions, stdout io.
 	if err != nil {
 		return err
 	}
-	if co.outputFile != "" {
-		o.Color = false
-	}
 	o.Findings, o.Verbose, o.ProblemsOnly, o.Facts = true, co.verbose, co.problems, co.facts
-	if err := writeOutput(co.outputFile, stdout, func(w io.Writer) error { return renderer.Render(w, r, o) }); err != nil {
+	o.Tables = module.Tables(a.reg.All())
+	render := func(w io.Writer) error { return renderer.Render(w, r, o) }
+	if co.outputFile != "" {
+		o.Color, o.Width = false, 0
+		err = writeOutput(co.outputFile, stdout, render)
+	} else {
+		err = page(g, stdout, render)
+	}
+	if err != nil {
 		return err
 	}
 	if code := r.ExitCode(); code != model.ExitOK {

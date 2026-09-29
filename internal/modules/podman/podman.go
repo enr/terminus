@@ -159,6 +159,14 @@ func (*Module) Description() string {
 	return "podman containers of root and of the users: state, health, restarts, ports, volumes and their owner"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"scopes.containers": {Columns: []string{"name", "state", "health", "restarts", "memory=stats.mem_usage_bytes", "cpu=stats.cpu_percent", "image", "ports"}},
+		"scopes.volumes":    {Columns: []string{"name", "driver", "size=size_bytes", "owner=owner_uid", "used_by"}},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return false }
 

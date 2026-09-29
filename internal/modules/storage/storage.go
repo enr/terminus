@@ -84,6 +84,25 @@ func (*Module) Description() string {
 	return "filesystems (usage, inodes, read-only), block devices, swap areas"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"filesystems": {
+			Columns: []string{"mount=mount_point", "type=fs_type", "size=size_bytes", "used=used_ratio", "inodes=inodes_used_ratio", "ro=read_only", "source", "error"},
+			// Memory filesystems and read-only images (snaps), unless they cannot be read.
+			Minor: []map[string]string{
+				{"fs_type": "tmpfs", "error": ""},
+				{"fs_type": "devtmpfs", "error": ""},
+				{"fs_type": "squashfs", "error": ""},
+			},
+		},
+		"block_devices": {
+			Columns: []string{"name", "size=size_bytes", "model", "rotational", "ro=read_only", "partitions"},
+			Minor:   []map[string]string{{"name": "loop*"}, {"name": "ram*"}, {"size_bytes": "0"}},
+		},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
 

@@ -1,0 +1,26 @@
+srv-01 · 2026-09-28T10:00:00Z · 0ms
+
+Modules  2 ok
+
+Facts
+  network:
+    interfaces:
+      NAME   ADDRESSES              MTU       RX
+      lo     127.0.0.1/8,::1/128  65536  2.0 KiB
+      eth0   10.0.0.2/24           1500  3.0 GiB
+      veth3  -                     1500        -
+      + 2 more: veth1, veth2 (-v shows them)
+    pressure: all 0
+    routes:
+      FLAGS  GATEWAY   METRIC
+      up,gw  10.0.0.1       0
+  systemd:
+    managers:
+      system
+        name: system
+        units:
+          NAME            ACTIVE  IO_MS  LOAD  RESTARTS
+          sshd.service    active   1.5s  0.04         0
+          backup.service  failed   12ms  2800         3
+
+tables show the main fields: -v shows them all, terminus facts network.interfaces.lo one record

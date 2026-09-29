@@ -54,18 +54,14 @@ Findings
   ✔ ok    disk.usage            41% used [/]
   ...
 
-Modules
-  cpu       ok       0ms
+Modules  5 ok · 1 skipped
   external  skipped  directory /etc/terminus/facts.d does not exist
-  memory    ok       0ms
-  network   ok       5ms
-  storage   ok       1ms
-  system    ok       5ms
 ```
 
 The exit code tells the outcome: `0` all good, `1` warnings, `2` failures, `3` terminus error.
 A module that could not be fully collected counts as a warning even when its findings look fine.
-`--problems` hides the findings that are fine, `-v` adds evidence and hints.
+`--problems` hides the findings that are fine, `-v` adds evidence and hints and lists every
+module with its collection time (only the ones not ok otherwise).
 
 The modules, their facts and their checks are described in [docs/modules.md](docs/modules.md).
 
@@ -99,6 +95,20 @@ $ terminus network.interfaces.eth0.addresses.0.ip
 $ terminus storage.filesystems./.used_ratio
 0.2301
 ```
+
+A section is printed as text on a terminal (JSON when piped, `-o` to choose):
+
+```shell
+$ terminus facts storage.filesystems
+MOUNT  TYPE       SIZE   USED  INODES  RO     SOURCE
+/      ext4   48.0 GiB  23.0%    4.1%  false  /dev/vda1
+/boot  ext4  975.9 MiB  31.2%    0.1%  false  /dev/vda2
+
+tables show the main fields: -v shows them all, terminus facts storage.filesystems./ one record
+```
+
+Long output goes through a pager on a terminal (`$TERMINUS_PAGER`, `$PAGER` or `less`;
+`--no-pager` to turn it off).
 
 Using templates (Go field names):
 

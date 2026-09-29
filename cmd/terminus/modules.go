@@ -6,20 +6,97 @@ import (
 	"io"
 	"sort"
 	"strings"
-	"text/tabwriter"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/enr/terminus/internal/module"
 )
 
+// minWrap is the least room for the last column to wrap beside the others; with less it goes on
+// lines of its own.
+const minWrap = 30
+
+// printTable prints rows aligned in columns. When the table is wider than the terminal the last
+// column (a description) wraps beside the others or, lacking room, below its row.
 func printTable(w io.Writer, header []string, rows [][]string) {
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, strings.Join(header, "\t"))
-	for _, r := range rows {
-		fmt.Fprintln(tw, strings.Join(r, "\t"))
+	printTableWidth(w, terminalWidth(w), header, rows)
+}
+
+// printTableWidth is printTable for a terminal width columns wide, 0 for no limit.
+func printTableWidth(w io.Writer, width int, header []string, rows [][]string) {
+	all := append([][]string{header}, rows...)
+	last := len(header) - 1
+	widths := make([]int, last)
+	lastWidth := 0
+	for _, r := range all {
+		for j := range last {
+			widths[j] = max(widths[j], lipgloss.Width(r[j]))
+		}
+		lastWidth = max(lastWidth, lipgloss.Width(r[last]))
 	}
-	tw.Flush()
+	prefix := 0
+	for _, n := range widths {
+		prefix += n + 2
+	}
+	room := 0 // no wrapping
+	if width > 0 && prefix+lastWidth > width {
+		room = width - prefix
+		if room < minWrap {
+			room = -(width - 4) // below the row
+		}
+	}
+	for i, r := range all {
+		var b strings.Builder
+		for j := range last {
+			b.WriteString(r[j] + strings.Repeat(" ", widths[j]-lipgloss.Width(r[j])+2))
+		}
+		var more []string
+		switch {
+		case room > 0:
+			lines := wrap(r[last], room)
+			b.WriteString(lines[0])
+			for _, l := range lines[1:] {
+				more = append(more, strings.Repeat(" ", prefix)+l)
+			}
+		case room < 0 && i > 0:
+			for _, l := range wrap(r[last], -room) {
+				more = append(more, "    "+l)
+			}
+		case room < 0:
+			// The header of a column shown below the rows is left out.
+		default:
+			b.WriteString(r[last])
+		}
+		fmt.Fprintln(w, strings.TrimRight(b.String(), " "))
+		for _, l := range more {
+			fmt.Fprintln(w, l)
+		}
+	}
+}
+
+// wrap splits text into lines of at most width columns, at spaces when possible.
+func wrap(text string, width int) []string {
+	var lines []string
+	line := ""
+	for _, word := range strings.Fields(text) {
+		for lipgloss.Width(word) > width {
+			r := []rune(word)
+			if line != "" {
+				lines, line = append(lines, line), ""
+			}
+			lines, word = append(lines, string(r[:width])), string(r[width:])
+		}
+		switch {
+		case line == "":
+			line = word
+		case lipgloss.Width(line)+1+lipgloss.Width(word) <= width:
+			line += " " + word
+		default:
+			lines, line = append(lines, line), word
+		}
+	}
+	return append(lines, line)
 }
 
 func printJSON(w io.Writer, v any) error {

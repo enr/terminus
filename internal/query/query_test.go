@@ -90,3 +90,43 @@ func TestResolveWholeTreeAndFormatJSON(t *testing.T) {
 		t.Fatalf("format = %q", got)
 	}
 }
+
+func TestResolveSchema(t *testing.T) {
+	tr := tree(t)
+	cases := map[string]string{
+		"network.interfaces.eth0":  "network.interfaces",
+		"Network.Interfaces.0.mtu": "network.interfaces.mtu",
+		"network.filesystems./srv": "network.filesystems",
+		"docker.ServerAPIVersion":  "external.docker.ServerAPIVersion",
+		"system.memory":            "system.Memory",
+		"":                         "",
+	}
+	for path, want := range cases {
+		_, got, ok := ResolveSchema(tr, path)
+		if !ok || got != want {
+			t.Errorf("%q: schema %q (%v), want %q", path, got, ok, want)
+		}
+	}
+	if _, _, ok := ResolveSchema(tr, "network.interfaces.wlan0"); ok {
+		t.Error("missing element found")
+	}
+}
+
+func TestItemKey(t *testing.T) {
+	cases := []struct {
+		m            map[string]any
+		field, value string
+		ok           bool
+	}{
+		{map[string]any{"name": "eth0", "id": "x"}, "name", "eth0", true},
+		{map[string]any{"mount_point": "/srv"}, "mount_point", "/srv", true},
+		{map[string]any{"name": "", "id": "abc"}, "id", "abc", true},
+		{map[string]any{"device": "sda"}, "", "", false},
+	}
+	for _, c := range cases {
+		field, value, ok := ItemKey(c.m)
+		if field != c.field || value != c.value || ok != c.ok {
+			t.Errorf("%v: %q %q %v", c.m, field, value, ok)
+		}
+	}
+}

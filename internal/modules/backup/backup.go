@@ -122,6 +122,13 @@ func (*Module) Description() string {
 	return "backups (restic, borg, pgBackRest): latest backup, age, result of the backup job"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"repositories": {Columns: []string{"name", "type", "latest=latest.time", "age=age_seconds", "job=job.result", "error"}},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return false }
 

@@ -130,6 +130,18 @@ func (*Module) Description() string {
 	return "interfaces, default routes, DNS, listening sockets"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"interfaces": {
+			Columns: []string{"name", "state=oper_state", "addresses=addresses.cidr", "mtu", "mac=hardware_addr", "rx=stats.rx_bytes", "tx=stats.tx_bytes", "errors=stats.rx_errors"},
+			// Virtual interfaces that are down: veth leftovers, ifb, dummy.
+			Minor: []map[string]string{{"virtual": "true", "up": "false"}},
+		},
+		"listeners": {Columns: []string{"protocol", "address", "port", "process", "pid", "uid"}},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
 
