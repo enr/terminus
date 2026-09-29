@@ -10,8 +10,8 @@ Facts
   podman: {}
   system:
     disks:
-      [0]
-        device: sda
+      DEVICE
+      sda
     flags: [fpu, sse]
     hostname: srv-01
     long: (13 items, -v to show)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,7 +78,7 @@ func (Text) Render(w io.Writer, r *model.Report, o Options) error {
 	}
 	renderModules(b, s, r)
 	if o.Facts {
-		renderFacts(b, s, r, o.Verbose)
+		renderFacts(b, s, r, o)
 	}
 	_, err := io.WriteString(w, b.String())
 	return err
@@ -153,7 +154,7 @@ func renderModules(b *strings.Builder, s styles, r *model.Report) {
 	}
 }
 
-func renderFacts(b *strings.Builder, s styles, r *model.Report, verbose bool) {
+func renderFacts(b *strings.Builder, s styles, r *model.Report, o Options) {
 	tree, err := query.Generic(r.FactsTree())
 	if err != nil {
 		fmt.Fprintf(b, "\nfacts not available: %v\n", err)
@@ -164,8 +165,20 @@ func renderFacts(b *strings.Builder, s styles, r *model.Report, verbose bool) {
 		return
 	}
 	fmt.Fprintf(b, "\n%s\n", s.title.Render("Facts"))
-	w := treeWriter{b: b, s: s, verbose: verbose}
-	w.write(root, 1)
+	w := newTreeWriter(b, s, o)
+	w.write(root, "", "", 1)
+	w.footer()
+}
+
+// RenderFactsValue renders the value found at path (schemaPath as query.ResolveSchema returns
+// it) as the facts section of the text output does.
+func RenderFactsValue(out io.Writer, path, schemaPath string, v any, o Options) error {
+	b := &strings.Builder{}
+	w := newTreeWriter(b, newStyles(out, o.Color), o)
+	w.write(v, schemaPath, path, 0)
+	w.footer()
+	_, err := io.WriteString(out, b.String())
+	return err
 }
 
 // Beyond these sizes lists of values and maps of values are summarized unless verbose.
@@ -178,10 +191,23 @@ type treeWriter struct {
 	b       *strings.Builder
 	s       styles
 	verbose bool
+	width   int
+	tables  map[string][]string
+	// hidden tells that a table left fields out; example is the path of a table row, shown in
+	// the footer to tell how to see all its fields.
+	hidden       bool
+	example      string
+	namedExample bool
 }
 
-// write prints a generic tree as indented "key: value" lines; lists of scalars stay on one line.
-func (w treeWriter) write(v any, depth int) {
+func newTreeWriter(b *strings.Builder, s styles, o Options) *treeWriter {
+	return &treeWriter{b: b, s: s, verbose: o.Verbose, width: o.Width, tables: o.Tables}
+}
+
+// write prints a generic tree as indented "key: value" lines; lists of scalars stay on one line,
+// lists of records become tables unless verbose. schema is the path of v as map keys only (the
+// key of the table columns), path the one that selects it (for the footer example).
+func (w *treeWriter) write(v any, schema, path string, depth int) {
 	b, s := w.b, w.s
 	indent := strings.Repeat("  ", depth)
 	switch node := v.(type) {
@@ -201,20 +227,58 @@ func (w treeWriter) write(v any, depth int) {
 				continue
 			}
 			fmt.Fprintf(b, "%s%s\n", indent, s.key.Render(k+":"))
-			w.write(child, depth+1)
+			w.write(child, joinPath(schema, k), joinPath(path, k), depth+1)
 		}
 	case []any:
+		if w.table(node, schema, path, depth) {
+			return
+		}
 		for i, child := range node {
 			if isScalar(child) {
 				fmt.Fprintf(b, "%s- %s\n", indent, scalarString(child))
 				continue
 			}
-			fmt.Fprintf(b, "%s%s\n", indent, s.dim.Render(fmt.Sprintf("[%d]", i)))
-			w.write(child, depth+1)
+			label, selector := itemLabel(child, i)
+			fmt.Fprintf(b, "%s%s\n", indent, s.title.Render(label))
+			w.write(child, schema, joinPath(path, selector), depth+1)
 		}
 	default:
 		fmt.Fprintf(b, "%s%s\n", indent, scalarString(v))
 	}
+}
+
+// itemLabel names a list element by its key field (eth0, /srv) or, lacking one, by its index;
+// selector is what selects it in a path.
+func itemLabel(v any, i int) (label, selector string) {
+	index := strconv.Itoa(i)
+	if m, ok := v.(map[string]any); ok {
+		if _, name, ok := query.ItemKey(m); ok {
+			if strings.Contains(name, ".") {
+				return name, index
+			}
+			return name, name
+		}
+	}
+	return "[" + index + "]", index
+}
+
+func joinPath(path, key string) string {
+	if path == "" {
+		return key
+	}
+	return path + "." + key
+}
+
+// footer tells how to see what the tables leave out.
+func (w *treeWriter) footer() {
+	if !w.hidden {
+		return
+	}
+	note := "tables show the main fields: -v shows them all"
+	if w.example != "" {
+		note += ", terminus facts " + w.example + " one record"
+	}
+	fmt.Fprintf(w.b, "\n%s\n", w.s.dim.Render(note))
 }
 
 // isScalar reports whether v fits on one line; empty maps and lists do.
@@ -317,9 +381,17 @@ func pad(s string, width int) string {
 }
 
 // humanValue formats values by key suffix: _bytes in binary units, _ratio as a percentage,
-// _seconds as a duration.
+// _seconds, _ms and _us as a duration.
 func humanValue(key string, v any) string {
 	switch {
+	case strings.HasSuffix(key, "_ms"):
+		if f, ok := toFloat(v); ok {
+			return HumanDuration(time.Duration(f * float64(time.Millisecond)))
+		}
+	case strings.HasSuffix(key, "_us"):
+		if f, ok := toFloat(v); ok {
+			return HumanDuration(time.Duration(f * float64(time.Microsecond)))
+		}
 	case strings.HasSuffix(key, "_bytes"):
 		if n, ok := toUint(v); ok {
 			return fmt.Sprintf("%s (%d)", HumanBytes(n), n)
@@ -337,9 +409,19 @@ func humanValue(key string, v any) string {
 		v = numberValue(n)
 	}
 	if f, ok := v.(float64); ok {
-		return fmt.Sprintf("%.3g", f)
+		return formatFloat(f)
 	}
 	return fmt.Sprint(v)
+}
+
+// formatFloat prints at most three decimals and no exponent: 2800, 16.83, 0.043.
+func formatFloat(f float64) string {
+	s := strconv.FormatFloat(f, 'f', 3, 64)
+	s = strings.TrimRight(strings.TrimRight(s, "0"), ".")
+	if s == "-0" {
+		return "0"
+	}
+	return s
 }
 
 func numberValue(n json.Number) any {

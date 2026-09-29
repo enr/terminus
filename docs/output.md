@@ -4,12 +4,16 @@ Every command that prints a report takes `-o`/`--output` and `--output-file`:
 
 | Format | For | Content |
 |---|---|---|
-| `text` | people at a terminal (default of `facts` and `check`) | summary, findings (`-v`: evidence and hints, `--problems`: only warn and fail), modules, facts (`facts`); colors only on a terminal (`--color`, `NO_COLOR`) |
+| `text` | people at a terminal (default of `facts` and `check`) | summary, findings (`-v`: evidence and hints, `--problems`: only warn and fail), modules, facts (`facts`: lists of records as tables of their main fields fitted to the terminal, `-v` every field); colors only on a terminal (`--color`, `NO_COLOR`) |
 | `json` | programs, `jq`, `terminus diff` | the complete report with `schema_version`, raw values (bytes, seconds, milliseconds), module statuses and errors |
 | `jsonl` | log shippers (Loki, Vector, Fluent Bit) | one line per finding, with host and time |
 | `markdown` | tickets, pull requests, wikis (default of `report`) | summary, findings and modules as tables, facts in collapsible JSON blocks |
 | `html` | archives, attachments | a single self-contained page (no script, no external resource), light and dark theme |
 | `prometheus` | alerting | text exposition format for the node_exporter textfile collector |
+
+On a terminal, output longer than the screen goes through a pager: `$TERMINUS_PAGER`, `$PAGER` or
+`less` (with `LESS=FRX` unless `LESS` is set); an empty value or `cat` turns it off, as does
+`--no-pager`.
 
 `--output-file path` writes to a temporary file and renames it at the end: readers never see a
 half-written file.

@@ -130,6 +130,14 @@ func (*Module) Description() string {
 	return "interfaces, default routes, DNS, listening sockets"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string][]string {
+	return map[string][]string{
+		"interfaces": {"name", "state=oper_state", "addresses=addresses.cidr", "mtu", "mac=hardware_addr", "rx=stats.rx_bytes", "tx=stats.tx_bytes", "errors=stats.rx_errors"},
+		"listeners":  {"protocol", "address", "port", "process", "pid", "uid"},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
 

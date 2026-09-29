@@ -218,3 +218,20 @@ func readBody(t *testing.T, res *http.Response) string {
 	}
 	return b.String()
 }
+
+func TestFactsSection(t *testing.T) {
+	// Not a terminal: JSON, as before, for scripts.
+	code, out, errOut := runCLI(t, "facts", "--only", "system", "system.kernel")
+	if code != 0 || !strings.HasPrefix(out, "{") {
+		t.Fatalf("default: code %d, out %q, err %q", code, out, errOut)
+	}
+	code, out, errOut = runCLI(t, "facts", "--only", "system", "-o", "text", "--no-pager", "system.kernel")
+	if code != 0 || !strings.Contains(out, "name: Linux") || strings.Contains(out, "{") {
+		t.Fatalf("-o text: code %d, out %q, err %q", code, out, errOut)
+	}
+	// A single value stays as is whatever the format.
+	code, out, _ = runCLI(t, "facts", "--only", "system", "-o", "text", "system.kernel.name")
+	if code != 0 || out != "Linux\n" {
+		t.Fatalf("scalar: code %d, out %q", code, out)
+	}
+}

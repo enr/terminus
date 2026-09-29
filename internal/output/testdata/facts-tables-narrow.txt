@@ -1,0 +1,25 @@
+srv-01 · 2026-09-28T10:00:00Z · 0ms
+
+Modules
+  network  ok  0ms
+  systemd  ok  0ms
+
+Facts
+  network:
+    interfaces:
+      NAME
+      lo
+      eth0
+    routes:
+      FLAGS  GATEWAY   METRIC
+      up,gw  10.0.0.1       0
+  systemd:
+    managers:
+      system
+        name: system
+        units:
+          NAME
+          sshd.service
+          backup.service
+
+tables show the main fields: -v shows them all, terminus facts network.interfaces.lo one record

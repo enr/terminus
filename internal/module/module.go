@@ -58,6 +58,32 @@ type Carrier interface {
 	ReportFacts() any
 }
 
+// Tabular is implemented by modules whose facts hold lists of records: the text output shows
+// them as tables with the given columns instead of one block per record.
+type Tabular interface {
+	// Tables maps the path of a list, as map keys from the module facts without the list
+	// selections (managers.units), to its columns. A column is a path in the record
+	// (stats.rx_bytes; through a list it collects every element: addresses.cidr), optionally
+	// named: "used=used_ratio". The last key of the path decides the formatting (_bytes, _ratio).
+	Tables() map[string][]string
+}
+
+// TableColumns returns the table columns declared by the modules, keyed by the schema path of
+// the list in the report facts (module name first).
+func TableColumns(mods []Module) map[string][]string {
+	out := map[string][]string{}
+	for _, m := range mods {
+		t, ok := m.(Tabular)
+		if !ok {
+			continue
+		}
+		for path, cols := range t.Tables() {
+			out[m.Name()+"."+path] = cols
+		}
+	}
+	return out
+}
+
 // Decoder decodes the configuration section of a module into v (a pointer to a struct).
 // Keys that v does not know are reported as errors by the configuration loader.
 type Decoder func(v any) error

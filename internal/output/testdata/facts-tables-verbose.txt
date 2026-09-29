@@ -1,0 +1,52 @@
+srv-01 · 2026-09-28T10:00:00Z · 0ms
+
+Modules
+  network  ok  0ms
+  systemd  ok  0ms
+
+Facts
+  network:
+    interfaces:
+      lo
+        addresses:
+          [0]
+            cidr: 127.0.0.1/8
+          [1]
+            cidr: ::1/128
+        mtu: 65536
+        name: lo
+        stats:
+          rx_bytes: 2.0 KiB (2048)
+      eth0
+        addresses:
+          [0]
+            cidr: 10.0.0.2/24
+        error: ""
+        mtu: 1500
+        name: eth0
+        stats:
+          rx_bytes: 3.0 GiB (3221225472)
+    routes:
+      [0]
+        flags: [up, gw]
+        gateway: 10.0.0.1
+        metric: 0
+        stats:
+          uses: 1
+  systemd:
+    managers:
+      system
+        name: system
+        units:
+          sshd.service
+            active: active
+            io_ms: 1.5s
+            load: 0.04
+            name: sshd.service
+            restarts: 0
+          backup.service
+            active: failed
+            io_ms: 12ms
+            load: 2800
+            name: backup.service
+            restarts: 3

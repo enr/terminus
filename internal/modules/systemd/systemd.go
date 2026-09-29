@@ -129,6 +129,13 @@ func (*Module) Description() string {
 	return "units of the system and user managers: state, restarts, memory limits and peaks, OOM kills, linger"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string][]string {
+	return map[string][]string{
+		"managers.units": {"name", "active", "sub", "result", "restarts", "memory=memory_current_bytes", "peak=memory_peak_bytes", "max=memory_max_bytes", "since=active_since"},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
 

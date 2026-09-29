@@ -25,6 +25,12 @@ type Options struct {
 	ProblemsOnly bool
 	// Facts adds the collected facts to the output (text renderer).
 	Facts bool
+	// Width is the width of the terminal, 0 when unknown: tables leave out the columns that do
+	// not fit (text renderer).
+	Width int
+	// Tables holds the columns of the lists of records shown as tables, keyed by schema path
+	// (module.TableColumns); the other lists of records get the columns they have (text renderer).
+	Tables map[string][]string
 }
 
 // Renderer writes a report in a format.

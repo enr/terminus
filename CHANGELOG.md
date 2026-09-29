@@ -44,6 +44,13 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
 - Commands run as another user (root only) with the session environment of that user.
 - Output formats: `text` for humans (colors only on a terminal, `--color`, `NO_COLOR`) and
   `json` with a versioned schema (`schema_version`), per-module status, errors and timings.
+- Text output of the facts: lists of records (interfaces, filesystems, units, containers ...)
+  are tables of their main fields, fitted to the terminal width; `-v` shows every field, with
+  list elements labelled by name. Durations in milliseconds and microseconds are humanized.
+- `terminus facts <section>` (e.g. `facts storage`, `facts network.interfaces.eth0`) prints the
+  section as text on a terminal, JSON otherwise (`-o text`/`-o json` to choose).
+- Long output on a terminal goes through a pager (`$TERMINUS_PAGER`, `$PAGER`, `less`);
+  `--no-pager` turns it off.
 - Modules run in parallel with a per-module timeout (`--timeout`); a failing or hanging module
   is reported instead of stopping the run. `--only` selects the modules.
 - `terminus serve`: `POST /facts` as before, plus `GET /report`.

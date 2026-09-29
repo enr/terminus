@@ -100,6 +100,20 @@ $ terminus storage.filesystems./.used_ratio
 0.2301
 ```
 
+A section is printed as text on a terminal (JSON when piped, `-o` to choose):
+
+```shell
+$ terminus facts storage.filesystems
+MOUNT  TYPE       SIZE   USED  INODES  RO     SOURCE
+/      ext4   48.0 GiB  23.0%    4.1%  false  /dev/vda1
+/boot  ext4  975.9 MiB  31.2%    0.1%  false  /dev/vda2
+
+tables show the main fields: -v shows them all, terminus facts storage.filesystems./ one record
+```
+
+Long output goes through a pager on a terminal (`$TERMINUS_PAGER`, `$PAGER` or `less`;
+`--no-pager` to turn it off).
+
 Using templates (Go field names):
 
 ```shell

@@ -143,6 +143,14 @@ func (*Module) Description() string {
 	return "TLS certificates in files and served by endpoints: expiry, chain, host names"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string][]string {
+	return map[string][]string{
+		"files":     {"subject", "days_left", "not_after", "trusted", "files"},
+		"endpoints": {"address", "server_name", "days_left=certificate.days_left", "not_after=certificate.not_after", "tls_version", "hostname_match", "error"},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return false }
 

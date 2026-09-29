@@ -84,6 +84,14 @@ func (*Module) Description() string {
 	return "filesystems (usage, inodes, read-only), block devices, swap areas"
 }
 
+// Tables implements module.Tabular.
+func (*Module) Tables() map[string][]string {
+	return map[string][]string{
+		"filesystems":   {"mount=mount_point", "type=fs_type", "size=size_bytes", "used=used_ratio", "inodes=inodes_used_ratio", "ro=read_only", "source", "error"},
+		"block_devices": {"name", "size=size_bytes", "model", "rotational", "ro=read_only", "partitions"},
+	}
+}
+
 // Core implements module.Module.
 func (*Module) Core() bool { return true }
 
