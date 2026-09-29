@@ -58,27 +58,37 @@ type Carrier interface {
 	ReportFacts() any
 }
 
-// Tabular is implemented by modules whose facts hold lists of records: the text output shows
-// them as tables with the given columns instead of one block per record.
-type Tabular interface {
-	// Tables maps the path of a list, as map keys from the module facts without the list
-	// selections (managers.units), to its columns. A column is a path in the record
-	// (stats.rx_bytes; through a list it collects every element: addresses.cidr), optionally
-	// named: "used=used_ratio". The last key of the path decides the formatting (_bytes, _ratio).
-	Tables() map[string][]string
+// Table describes how the text output shows a list of records.
+type Table struct {
+	// Columns are the fields shown. A column is a path in the record (stats.rx_bytes; through a
+	// list it collects every element: addresses.cidr), optionally named: "used=used_ratio". The
+	// last key of the path decides the formatting (_bytes, _ratio).
+	Columns []string
+	// Minor matches the records folded into one line unless verbose (memory filesystems, virtual
+	// interfaces down): a record is minor when every field of one of the entries matches its
+	// pattern (path.Match on the value as text: "tmpfs", "loop*", "false").
+	Minor []map[string]string
 }
 
-// TableColumns returns the table columns declared by the modules, keyed by the schema path of
-// the list in the report facts (module name first).
-func TableColumns(mods []Module) map[string][]string {
-	out := map[string][]string{}
+// Tabular is implemented by modules whose facts hold lists of records: the text output shows
+// them as tables instead of one block per record.
+type Tabular interface {
+	// Tables maps the path of a list, as map keys from the module facts without the list
+	// selections (managers.units), to its table.
+	Tables() map[string]Table
+}
+
+// Tables returns the tables declared by the modules, keyed by the schema path of the list in
+// the report facts (module name first).
+func Tables(mods []Module) map[string]Table {
+	out := map[string]Table{}
 	for _, m := range mods {
 		t, ok := m.(Tabular)
 		if !ok {
 			continue
 		}
-		for path, cols := range t.Tables() {
-			out[m.Name()+"."+path] = cols
+		for path, table := range t.Tables() {
+			out[m.Name()+"."+path] = table
 		}
 	}
 	return out

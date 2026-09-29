@@ -1,8 +1,6 @@
 srv-01 · 2026-09-28T10:00:00Z · 0ms
 
-Modules
-  network  ok  0ms
-  systemd  ok  0ms
+Modules  2 ok
 
 Facts
   network:
@@ -10,6 +8,9 @@ Facts
       NAME
       lo
       eth0
+      veth3
+      + 2 more: … (-v shows them)
+    pressure: all 0
     routes:
       FLAGS  GATEWAY   METRIC
       up,gw  10.0.0.1       0

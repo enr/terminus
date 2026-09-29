@@ -3,6 +3,7 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 
@@ -38,6 +39,7 @@ func (w *treeWriter) table(list []any, schema, path string, depth int) bool {
 	if !ok {
 		return false
 	}
+	rows, minor := splitMinor(rows, w.tables[schema].Minor)
 	cols = withValues(rows, cols)
 
 	cells := make([][]string, len(rows))
@@ -97,6 +99,9 @@ func (w *treeWriter) table(list []any, schema, path string, depth int) bool {
 		})
 	}
 
+	if len(minor) > 0 {
+		w.fold(minor, indent)
+	}
 	if _, _, named := query.ItemKey(rows[0]); w.example == "" || named && !w.namedExample {
 		label, sel := itemLabel(rows[0], 0)
 		w.example, w.namedExample = joinPath(path, sel), label == sel
@@ -121,9 +126,9 @@ func withValues(rows []map[string]any, cols []column) []column {
 // columns returns the columns declared for the list or, lacking them, one for each field that
 // fits a cell: the key field first, then by name. Records holding records are left out.
 func (w *treeWriter) columns(rows []map[string]any, schema string) ([]column, bool) {
-	if specs, ok := w.tables[schema]; ok {
-		cols := make([]column, 0, len(specs))
-		for _, spec := range specs {
+	if t, ok := w.tables[schema]; ok && len(t.Columns) > 0 {
+		cols := make([]column, 0, len(t.Columns))
+		for _, spec := range t.Columns {
 			name, path, named := strings.Cut(spec, "=")
 			if !named {
 				path = spec
@@ -218,17 +223,67 @@ func cellText(key string, v any) string {
 	case map[string]any:
 		s = "{…}"
 	default:
-		s = humanValue(key, v)
-		if strings.HasSuffix(key, "_bytes") {
-			if n, ok := toUint(v); ok {
-				s = HumanBytes(n)
-			}
-		}
+		s = compactValue(key, v)
 	}
 	if r := []rune(s); len(r) > maxCell {
 		s = string(r[:maxCell-1]) + "…"
 	}
 	return s
+}
+
+// splitMinor separates the minor records; when every record is minor none is.
+func splitMinor(rows []map[string]any, patterns []map[string]string) (major, minor []map[string]any) {
+	for _, row := range rows {
+		if isMinor(row, patterns) {
+			minor = append(minor, row)
+		} else {
+			major = append(major, row)
+		}
+	}
+	if len(major) == 0 {
+		return rows, nil
+	}
+	return major, minor
+}
+
+func isMinor(row map[string]any, patterns []map[string]string) bool {
+	for _, p := range patterns {
+		match := true
+		for field, pattern := range p {
+			value := ""
+			switch v := row[field].(type) {
+			case nil:
+			case string:
+				value = v
+			default:
+				value = scalarString(v)
+			}
+			if ok, _ := path.Match(pattern, value); !ok {
+				match = false
+				break
+			}
+		}
+		if match && len(p) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// fold prints the minor records as one line of names, cut to the terminal width.
+func (w *treeWriter) fold(minor []map[string]any, indent string) {
+	names := make([]string, len(minor))
+	for i, row := range minor {
+		names[i], _ = itemLabel(row, i)
+	}
+	head := fmt.Sprintf("+ %d more: ", len(minor))
+	tail := " (-v shows them)"
+	list := strings.Join(names, ", ")
+	if room := w.width - len(indent) - lipgloss.Width(head+tail); w.width > 0 && lipgloss.Width(list) > room {
+		r := []rune(list)
+		list = string(r[:max(room-1, 0)]) + "…"
+	}
+	fmt.Fprintf(w.b, "%s%s\n", indent, w.s.dim.Render(head+list+tail))
 }
 
 func sum(l []int) int {

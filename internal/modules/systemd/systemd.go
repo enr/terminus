@@ -130,9 +130,9 @@ func (*Module) Description() string {
 }
 
 // Tables implements module.Tabular.
-func (*Module) Tables() map[string][]string {
-	return map[string][]string{
-		"managers.units": {"name", "active", "sub", "result", "restarts", "memory=memory_current_bytes", "peak=memory_peak_bytes", "max=memory_max_bytes", "since=active_since"},
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"managers.units": {Columns: []string{"name", "active", "sub", "result", "restarts", "memory=memory_current_bytes", "peak=memory_peak_bytes", "max=memory_max_bytes", "since=active_since"}},
 	}
 }
 

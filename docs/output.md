@@ -4,7 +4,7 @@ Every command that prints a report takes `-o`/`--output` and `--output-file`:
 
 | Format | For | Content |
 |---|---|---|
-| `text` | people at a terminal (default of `facts` and `check`) | summary, findings (`-v`: evidence and hints, `--problems`: only warn and fail), modules, facts (`facts`: lists of records as tables of their main fields fitted to the terminal, `-v` every field); colors only on a terminal (`--color`, `NO_COLOR`) |
+| `text` | people at a terminal (default of `facts` and `check`) | summary, findings (`-v`: evidence and hints, `--problems`: only warn and fail), modules, facts (`facts`: lists of records as tables of their main fields fitted to the terminal, minor records such as memory filesystems folded into one line, counters all at zero as `all 0`, sizes in binary units; `-v` every field and record, exact byte counts, every module); colors only on a terminal (`--color`, `NO_COLOR`) |
 | `json` | programs, `jq`, `terminus diff` | the complete report with `schema_version`, raw values (bytes, seconds, milliseconds), module statuses and errors |
 | `jsonl` | log shippers (Loki, Vector, Fluent Bit) | one line per finding, with host and time |
 | `markdown` | tickets, pull requests, wikis (default of `report`) | summary, findings and modules as tables, facts in collapsible JSON blocks |

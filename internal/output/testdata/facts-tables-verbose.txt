@@ -1,6 +1,6 @@
 srv-01 · 2026-09-28T10:00:00Z · 0ms
 
-Modules
+Modules  2 ok
   network  ok  0ms
   systemd  ok  0ms
 
@@ -26,6 +26,24 @@ Facts
         name: eth0
         stats:
           rx_bytes: 3.0 GiB (3221225472)
+      veth1
+        mtu: 1500
+        name: veth1
+        up: false
+      veth2
+        mtu: 1500
+        name: veth2
+        up: false
+      veth3
+        mtu: 1500
+        name: veth3
+        up: true
+    pressure:
+      full:
+        avg10: 0
+      some:
+        avg10: 0
+        total_us: 0ms
     routes:
       [0]
         flags: [up, gw]

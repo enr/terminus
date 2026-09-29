@@ -8,8 +8,7 @@ Findings
 line2 <b>&</b> [a|b <x> "q" \ z]
   ✔ ok    disk.usage         42% used [/]
 
-Modules
+Modules  1 ok · 1 partial · 1 skipped
   external  skipped  directory /etc/terminus/facts.d does not exist
   podman    partial  1.5s
             ↳ volume inspect: permission denied
-  system    ok       12ms

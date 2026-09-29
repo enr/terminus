@@ -1,10 +1,9 @@
 srv-01 · 2026-09-28T10:00:00Z · 123ms
 
-Modules
+Modules  1 ok · 1 partial · 1 skipped
   external  skipped  directory /etc/terminus/facts.d does not exist
   podman    partial  1.5s
             ↳ volume inspect: permission denied
-  system    ok       12ms
 
 Facts
   podman: {}
@@ -17,5 +16,5 @@ Facts
     long: (13 items, -v to show)
     memory:
       available_ratio: 7.3%
-      total_bytes: 4.0 GiB (4294967296)
+      total_bytes: 4.0 GiB
     uptime_seconds: 2d4h

@@ -108,9 +108,9 @@ func (*Module) Description() string {
 }
 
 // Tables implements module.Tabular.
-func (*Module) Tables() map[string][]string {
-	return map[string][]string{
-		"managers.timers": {"name", "active", "schedule", "last_run", "next_run", "unit=unit.name", "result=unit.result"},
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"managers.timers": {Columns: []string{"name", "active", "schedule", "last_run", "next_run", "unit=unit.name", "result=unit.result"}},
 	}
 }
 

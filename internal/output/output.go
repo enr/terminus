@@ -11,6 +11,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/enr/terminus/internal/model"
+	"github.com/enr/terminus/internal/module"
 )
 
 // Options tune the rendering.
@@ -28,9 +29,9 @@ type Options struct {
 	// Width is the width of the terminal, 0 when unknown: tables leave out the columns that do
 	// not fit (text renderer).
 	Width int
-	// Tables holds the columns of the lists of records shown as tables, keyed by schema path
-	// (module.TableColumns); the other lists of records get the columns they have (text renderer).
-	Tables map[string][]string
+	// Tables describes the lists of records shown as tables, keyed by schema path
+	// (module.Tables); the other lists of records get the columns they have (text renderer).
+	Tables map[string]module.Table
 }
 
 // Renderer writes a report in a format.

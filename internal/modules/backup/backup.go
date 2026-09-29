@@ -123,9 +123,9 @@ func (*Module) Description() string {
 }
 
 // Tables implements module.Tabular.
-func (*Module) Tables() map[string][]string {
-	return map[string][]string{
-		"repositories": {"name", "type", "latest=latest.time", "age=age_seconds", "job=job.result", "error"},
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"repositories": {Columns: []string{"name", "type", "latest=latest.time", "age=age_seconds", "job=job.result", "error"}},
 	}
 }
 

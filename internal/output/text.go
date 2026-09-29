@@ -13,6 +13,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/enr/terminus/internal/model"
+	"github.com/enr/terminus/internal/module"
 	"github.com/enr/terminus/internal/query"
 )
 
@@ -76,7 +77,7 @@ func (Text) Render(w io.Writer, r *model.Report, o Options) error {
 		renderSummary(b, s, r.Summary)
 		renderFindings(b, s, r, o)
 	}
-	renderModules(b, s, r)
+	renderModules(b, s, r, o.Verbose)
 	if o.Facts {
 		renderFacts(b, s, r, o)
 	}
@@ -85,11 +86,16 @@ func (Text) Render(w io.Writer, r *model.Report, o Options) error {
 }
 
 func renderSummary(b *strings.Builder, s styles, sum model.Summary) {
-	fmt.Fprintf(b, "%s  %s  %s  %s\n",
-		s.sev[model.SeverityFail].Render(fmt.Sprintf("%s %d fail", severitySymbol[model.SeverityFail], sum.Fail)),
-		s.sev[model.SeverityWarn].Render(fmt.Sprintf("%s %d warn", severitySymbol[model.SeverityWarn], sum.Warn)),
-		s.sev[model.SeverityInfo].Render(fmt.Sprintf("%s %d info", severitySymbol[model.SeverityInfo], sum.Info)),
-		s.sev[model.SeverityOK].Render(fmt.Sprintf("%s %d ok", severitySymbol[model.SeverityOK], sum.OK)))
+	// Zero counts are grey: the eye goes to the severities that have findings.
+	count := func(sev model.Severity, n int) string {
+		text := fmt.Sprintf("%s %d %s", severitySymbol[sev], n, sev)
+		if n == 0 {
+			return s.dim.Render(text)
+		}
+		return s.sev[sev].Render(text)
+	}
+	fmt.Fprintf(b, "%s  %s  %s  %s\n", count(model.SeverityFail, sum.Fail), count(model.SeverityWarn, sum.Warn),
+		count(model.SeverityInfo, sum.Info), count(model.SeverityOK, sum.OK))
 }
 
 func renderFindings(b *strings.Builder, s styles, r *model.Report, o Options) {
@@ -129,12 +135,32 @@ func renderFindings(b *strings.Builder, s styles, r *model.Report, o Options) {
 	}
 }
 
-func renderModules(b *strings.Builder, s styles, r *model.Report) {
-	names := r.ModuleNames()
-	if len(names) == 0 {
+// moduleStatuses is the order of the counts in the Modules heading.
+var moduleStatuses = []model.ModuleStatus{model.StatusOK, model.StatusPartial, model.StatusError, model.StatusSkipped}
+
+// renderModules prints the modules that did not collect their facts normally, all of them when
+// verbose, under a heading counting them by status.
+func renderModules(b *strings.Builder, s styles, r *model.Report, verbose bool) {
+	all := r.ModuleNames()
+	if len(all) == 0 {
 		return
 	}
-	fmt.Fprintf(b, "\n%s\n", s.title.Render("Modules"))
+	counts := map[model.ModuleStatus]int{}
+	var names []string
+	for _, n := range all {
+		st := r.Modules[n].Status
+		counts[st]++
+		if verbose || st != model.StatusOK {
+			names = append(names, n)
+		}
+	}
+	var parts []string
+	for _, st := range moduleStatuses {
+		if counts[st] > 0 {
+			parts = append(parts, s.status[st].Render(fmt.Sprintf("%d %s", counts[st], st)))
+		}
+	}
+	fmt.Fprintf(b, "\n%s  %s\n", s.title.Render("Modules"), strings.Join(parts, s.dim.Render(" · ")))
 	nameWidth, statusWidth := 0, 0
 	for _, n := range names {
 		nameWidth = max(nameWidth, len(n))
@@ -192,7 +218,7 @@ type treeWriter struct {
 	s       styles
 	verbose bool
 	width   int
-	tables  map[string][]string
+	tables  map[string]module.Table
 	// hidden tells that a table left fields out; example is the path of a table row, shown in
 	// the footer to tell how to see all its fields.
 	hidden       bool
@@ -215,7 +241,11 @@ func (w *treeWriter) write(v any, schema, path string, depth int) {
 		for _, k := range sortedKeys(node) {
 			child := node[k]
 			if isScalar(child) && !isEmptyMap(child) {
-				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), humanScalar(k, child))
+				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), w.scalar(k, child))
+				continue
+			}
+			if !w.verbose && allZero(child) {
+				fmt.Fprintf(b, "%s%s %s\n", indent, s.key.Render(k+":"), s.dim.Render("all 0"))
 				continue
 			}
 			if summary, ok := w.summarize(child); ok {
@@ -321,12 +351,41 @@ func isEmptyMap(v any) bool {
 	return ok && len(m) == 0
 }
 
-// humanScalar formats a fact value, humanizing sizes, ratios and durations by key.
-func humanScalar(key string, v any) string {
+// scalar formats a fact value, humanizing sizes, ratios and durations by key; the exact number
+// of bytes only when verbose.
+func (w *treeWriter) scalar(key string, v any) string {
 	if _, isString := v.(string); isString || v == nil {
 		return scalarString(v)
 	}
-	return humanValue(key, v)
+	if w.verbose {
+		return humanValue(key, v)
+	}
+	return compactValue(key, v)
+}
+
+// allZero tells whether v is a map of maps whose values, at least two, are all the number 0:
+// counters that never moved (pressure stall totals, error counters).
+func allZero(v any) bool {
+	n := 0
+	var walk func(any) bool
+	walk = func(v any) bool {
+		switch t := v.(type) {
+		case map[string]any:
+			for _, c := range t {
+				if !walk(c) {
+					return false
+				}
+			}
+			return true
+		case json.Number:
+			n++
+			f, err := t.Float64()
+			return err == nil && f == 0
+		}
+		return false
+	}
+	_, isMap := v.(map[string]any)
+	return isMap && walk(v) && n >= 2
 }
 
 func isScalarList(v any) bool {
@@ -412,6 +471,16 @@ func humanValue(key string, v any) string {
 		return formatFloat(f)
 	}
 	return fmt.Sprint(v)
+}
+
+// compactValue is humanValue with sizes in binary units only: 3.8 GiB.
+func compactValue(key string, v any) string {
+	if strings.HasSuffix(key, "_bytes") {
+		if n, ok := toUint(v); ok {
+			return HumanBytes(n)
+		}
+	}
+	return humanValue(key, v)
 }
 
 // formatFloat prints at most three decimals and no exponent: 2800, 16.83, 0.043.

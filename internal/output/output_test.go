@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/enr/terminus/internal/model"
+	"github.com/enr/terminus/internal/module"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -158,8 +159,12 @@ func tablesReport() *model.Report {
 				"stats": map[string]any{"rx_bytes": 2048}},
 			{"name": "eth0", "mtu": 1500, "addresses": []map[string]any{{"cidr": "10.0.0.2/24"}},
 				"stats": map[string]any{"rx_bytes": uint64(3 << 30)}, "error": ""},
+			{"name": "veth1", "mtu": 1500, "up": false},
+			{"name": "veth2", "mtu": 1500, "up": false},
+			{"name": "veth3", "mtu": 1500, "up": true},
 		},
-		"routes": []map[string]any{{"gateway": "10.0.0.1", "metric": 0, "flags": []string{"up", "gw"}, "stats": map[string]any{"uses": 1}}},
+		"pressure": map[string]any{"some": map[string]any{"avg10": 0, "total_us": 0}, "full": map[string]any{"avg10": 0.0}},
+		"routes":   []map[string]any{{"gateway": "10.0.0.1", "metric": 0, "flags": []string{"up", "gw"}, "stats": map[string]any{"uses": 1}}},
 	}}
 	r.Modules["systemd"] = model.ModuleResult{Name: "systemd", Status: model.StatusOK, Facts: map[string]any{
 		"managers": []map[string]any{{"name": "system", "units": []map[string]any{
@@ -170,8 +175,11 @@ func tablesReport() *model.Report {
 	return r
 }
 
-var tablesColumns = map[string][]string{
-	"network.interfaces": {"name", "addresses=addresses.cidr", "mtu", "rx=stats.rx_bytes", "error"},
+var tablesColumns = map[string]module.Table{
+	"network.interfaces": {
+		Columns: []string{"name", "addresses=addresses.cidr", "mtu", "rx=stats.rx_bytes", "error"},
+		Minor:   []map[string]string{{"name": "veth*", "up": "false"}},
+	},
 }
 
 func TestTextTables(t *testing.T) {

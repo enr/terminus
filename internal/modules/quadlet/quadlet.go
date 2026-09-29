@@ -133,9 +133,9 @@ func (*Module) Description() string {
 }
 
 // Tables implements module.Tabular.
-func (*Module) Tables() map[string][]string {
-	return map[string][]string{
-		"scopes.files": {"name", "kind", "service", "active=state.active", "sub=state.sub", "image", "diagnostics"},
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"scopes.files": {Columns: []string{"name", "kind", "service", "active=state.active", "sub=state.sub", "image", "diagnostics"}},
 	}
 }
 

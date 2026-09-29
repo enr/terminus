@@ -54,18 +54,14 @@ Findings
   ✔ ok    disk.usage            41% used [/]
   ...
 
-Modules
-  cpu       ok       0ms
+Modules  5 ok · 1 skipped
   external  skipped  directory /etc/terminus/facts.d does not exist
-  memory    ok       0ms
-  network   ok       5ms
-  storage   ok       1ms
-  system    ok       5ms
 ```
 
 The exit code tells the outcome: `0` all good, `1` warnings, `2` failures, `3` terminus error.
 A module that could not be fully collected counts as a warning even when its findings look fine.
-`--problems` hides the findings that are fine, `-v` adds evidence and hints.
+`--problems` hides the findings that are fine, `-v` adds evidence and hints and lists every
+module with its collection time (only the ones not ok otherwise).
 
 The modules, their facts and their checks are described in [docs/modules.md](docs/modules.md).
 

@@ -199,11 +199,21 @@ func renderOptions(g *globalOptions, stdout io.Writer) (output.Options, error) {
 		return o, nil
 	}
 	color, err := output.UseColor(output.ColorMode(g.color), f)
-	o.Color = color
-	if width, _, err := term.GetSize(int(f.Fd())); err == nil {
-		o.Width = width
-	}
+	o.Color, o.Width = color, terminalWidth(f)
 	return o, err
+}
+
+// terminalWidth returns the width of w when it is a terminal, 0 otherwise.
+func terminalWidth(w io.Writer) int {
+	f, ok := w.(*os.File)
+	if !ok || !term.IsTerminal(int(f.Fd())) {
+		return 0
+	}
+	width, _, err := term.GetSize(int(f.Fd()))
+	if err != nil {
+		return 0
+	}
+	return width
 }
 
 type factsOptions struct {
@@ -282,7 +292,7 @@ func runFacts(ctx context.Context, g *globalOptions, fo *factsOptions, args []st
 			if err != nil {
 				return err
 			}
-			o.Verbose, o.Tables = fo.verbose, module.TableColumns(a.reg.All())
+			o.Verbose, o.Tables = fo.verbose, module.Tables(a.reg.All())
 			return page(g, stdout, func(w io.Writer) error { return output.RenderFactsValue(w, args[0], schema, v, o) })
 		}
 		s, err := query.Format(v)
@@ -297,7 +307,7 @@ func runFacts(ctx context.Context, g *globalOptions, fo *factsOptions, args []st
 	if err != nil {
 		return err
 	}
-	o.Facts, o.Verbose, o.Tables = true, fo.verbose, module.TableColumns(a.reg.All())
+	o.Facts, o.Verbose, o.Tables = true, fo.verbose, module.Tables(a.reg.All())
 	if fo.outputFile != "" {
 		o.Color, o.Width = false, 0
 		return writeOutput(fo.outputFile, stdout, func(w io.Writer) error { return renderer.Render(w, r, o) })
@@ -430,7 +440,7 @@ func runCheck(cmd *cobra.Command, g *globalOptions, co *checkOptions, stdout io.
 		return err
 	}
 	o.Findings, o.Verbose, o.ProblemsOnly, o.Facts = true, co.verbose, co.problems, co.facts
-	o.Tables = module.TableColumns(a.reg.All())
+	o.Tables = module.Tables(a.reg.All())
 	render := func(w io.Writer) error { return renderer.Render(w, r, o) }
 	if co.outputFile != "" {
 		o.Color, o.Width = false, 0

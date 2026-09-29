@@ -160,10 +160,10 @@ func (*Module) Description() string {
 }
 
 // Tables implements module.Tabular.
-func (*Module) Tables() map[string][]string {
-	return map[string][]string{
-		"scopes.containers": {"name", "state", "health", "restarts", "memory=stats.mem_usage_bytes", "cpu=stats.cpu_percent", "image", "ports"},
-		"scopes.volumes":    {"name", "driver", "size=size_bytes", "owner=owner_uid", "used_by"},
+func (*Module) Tables() map[string]module.Table {
+	return map[string]module.Table{
+		"scopes.containers": {Columns: []string{"name", "state", "health", "restarts", "memory=stats.mem_usage_bytes", "cpu=stats.cpu_percent", "image", "ports"}},
+		"scopes.volumes":    {Columns: []string{"name", "driver", "size=size_bytes", "owner=owner_uid", "used_by"}},
 	}
 }
 

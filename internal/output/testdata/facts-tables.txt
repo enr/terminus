@@ -1,15 +1,16 @@
 srv-01 · 2026-09-28T10:00:00Z · 0ms
 
-Modules
-  network  ok  0ms
-  systemd  ok  0ms
+Modules  2 ok
 
 Facts
   network:
     interfaces:
-      NAME  ADDRESSES              MTU       RX
-      lo    127.0.0.1/8,::1/128  65536  2.0 KiB
-      eth0  10.0.0.2/24           1500  3.0 GiB
+      NAME   ADDRESSES              MTU       RX
+      lo     127.0.0.1/8,::1/128  65536  2.0 KiB
+      eth0   10.0.0.2/24           1500  3.0 GiB
+      veth3  -                     1500        -
+      + 2 more: veth1, veth2 (-v shows them)
+    pressure: all 0
     routes:
       FLAGS  GATEWAY   METRIC
       up,gw  10.0.0.1       0
