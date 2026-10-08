@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+      - name: Check
+        run: .sdlc/check
+      # The archive names come from APP_VERSION in .sdlc/config: a tag pushed by hand on a
+      # commit with another version would publish mislabeled archives.
+      - name: Verify version
+        run: |
+          source .sdlc/config
+          [[ "v${APP_VERSION}" == "${GITHUB_REF_NAME}" ]] || {
+            echo "tag ${GITHUB_REF_NAME} does not match APP_VERSION ${APP_VERSION} in .sdlc/config"
+            exit 1
+          }
+      - name: Build distribution
+        run: .sdlc/build-dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/SHA256SUMS
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true

@@ -155,4 +155,13 @@ Use the scripts in the `.sdlc/` directory.
   available) and the static build: `.sdlc/check`. On a workstation the checks that need a
   missing tool are skipped and listed at the end; in CI (`CI=true`) or with `SDLC_STRICT=1`
   they are errors.
+- Format the sources: `.sdlc/fmt`; format check, vet and staticcheck only: `.sdlc/lint`
+- Run the tests with the race detector and shuffled order: `.sdlc/test`; build and tests with a
+  compact summary: `.sdlc/ci`
+- Run from sources: `.sdlc/run [args]`; build and install in `~/bin` (or a given directory):
+  `.sdlc/install [dir]`
+- Release: `.sdlc/release <version> <next_version>` sets `APP_VERSION` in `.sdlc/config`, commits,
+  tags `v<version>`, moves to `<next_version>-dev` and pushes; the tag push runs the GitHub
+  release workflow, which publishes the `dist/` archives (as a prerelease when the version
+  contains `-`).
 - Update dependencies: `.sdlc/update`

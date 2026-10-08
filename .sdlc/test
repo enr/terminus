@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+
+TOOL_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$TOOL_SOURCE" ] ; do TOOL_SOURCE="$(readlink "$TOOL_SOURCE")"; done
+SDLC_DIR="$( cd -P "$( dirname "$TOOL_SOURCE" )" && pwd )"
+PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
+
+cd "${PRJ_HOME}"
+
+# -shuffle=on catches tests that depend on the execution order of their siblings; -race needs
+# cgo and a C compiler (see .sdlc/check for the fallback when they are missing).
+echo "--- go test"
+CGO_ENABLED=1 go test -shuffle=on -race ./... "$@"

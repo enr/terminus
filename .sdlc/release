@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+set -e
+
+TOOL_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$TOOL_SOURCE" ] ; do TOOL_SOURCE="$(readlink "$TOOL_SOURCE")"; done
+SDLC_DIR="$( cd -P "$( dirname "$TOOL_SOURCE" )" && pwd )"
+PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
+
+cd "${PRJ_HOME}"
+
+usage() {
+  echo 'Usage: release <release_version> <next_version>'
+  echo 'Example: release 0.2.0 0.3.0 (the next version becomes 0.3.0-dev)'
+}
+
+command -v git >/dev/null || {
+  echo 'git not found: aborting release'
+  exit 1
+}
+
+git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null || {
+  echo 'no upstream set for current branch: aborting release'
+  exit 1
+}
+
+[[ "$(git rev-parse @)" = "$(git rev-parse '@{u}')" ]] || {
+  echo 'local branch and upstream are not aligned: aborting release'
+  exit 1
+}
+
+[[ -n "$1" && -n "$2" ]] || {
+  usage
+  exit 1
+}
+release_version="$1"
+next_version="${2}-dev"
+
+tag_name="v${release_version}"
+[[ -z "$(git tag -l "$tag_name")" ]] || {
+  echo "tag ${tag_name} exists: aborting release"
+  exit 1
+}
+
+[[ -z "$(git status --porcelain)" ]] || {
+  echo 'uncommitted changes detected: aborting release'
+  exit 1
+}
+
+# set_version rewrites the APP_VERSION_AUTOLINE line of .sdlc/config.
+set_version() {
+  sed -i "s/^APP_VERSION=.* # APP_VERSION_AUTOLINE /APP_VERSION='$1' # APP_VERSION_AUTOLINE /" "${SDLC_DIR}/config"
+  grep -q "^APP_VERSION='$1' # APP_VERSION_AUTOLINE " "${SDLC_DIR}/config" || {
+    echo "APP_VERSION_AUTOLINE not updated in ${SDLC_DIR}/config"
+    exit 1
+  }
+}
+
+echo "release ${release_version} (tag ${tag_name}), then ${next_version}"
+
+set_version "$release_version"
+git add "${SDLC_DIR}/config"
+git commit -m "release ${release_version}"
+git tag -a "$tag_name" -m "Release ${release_version}"
+
+set_version "$next_version"
+git add "${SDLC_DIR}/config"
+git commit -m "[skip ci] prepare ${next_version}"
+
+# The tag push triggers .github/workflows/release.yml, which builds and publishes the release.
+git push
+git push origin "$tag_name"
