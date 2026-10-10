@@ -1,0 +1,81 @@
+# Documentation site of terminus. The pages are the Markdown files of docs/ (and README.md as the
+# home page), mounted as they are: they stay readable on GitHub and need no front matter.
+#
+#   hugo server --source site       # preview on http://localhost:1313/
+#   .sdlc/site                      # build into site/public
+
+baseURL = "https://enr.github.io/terminus/"
+languageCode = "en"
+title = "terminus"
+enableGitInfo = false
+disableKinds = ["taxonomy", "term", "RSS"]
+
+[params]
+  description = "Get facts about a Linux machine and check them."
+  repo = "https://github.com/enr/terminus"
+  branch = "master"
+
+[[module.mounts]]
+  source = "../README.md"
+  target = "content/_index.md"
+
+[[module.mounts]]
+  source = "../docs"
+  target = "content/docs"
+
+[[module.mounts]]
+  source = "layouts"
+  target = "layouts"
+
+[[module.mounts]]
+  source = "assets"
+  target = "assets"
+
+[markup]
+  [markup.goldmark.parser]
+    # GitHub style ids, so that the anchors used in the Markdown links (#external-modules) work.
+    autoHeadingIDType = "github"
+  [markup.highlight]
+    noClasses = false
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 3
+
+# The order of the sidebar.
+[menus]
+  [[menus.main]]
+    name = "Overview"
+    pageRef = "/"
+    weight = 10
+  [[menus.main]]
+    name = "Modules"
+    pageRef = "/docs/modules"
+    weight = 20
+  [[menus.main]]
+    name = "Configuration"
+    pageRef = "/docs/configuration"
+    weight = 30
+  [[menus.main]]
+    name = "Custom facts"
+    pageRef = "/docs/custom-facts"
+    weight = 40
+  [[menus.main]]
+    name = "Output formats"
+    pageRef = "/docs/output"
+    weight = 50
+  [[menus.main]]
+    name = "Remote machines"
+    pageRef = "/docs/remote"
+    weight = 60
+  [[menus.main]]
+    name = "Probing the monitoring"
+    pageRef = "/docs/probe"
+    weight = 70
+  [[menus.main]]
+    name = "HTTP API"
+    pageRef = "/docs/api"
+    weight = 80
+  [[menus.main]]
+    name = "Design v2 (it)"
+    pageRef = "/docs/design-v2"
+    weight = 90

@@ -15,3 +15,6 @@ if [[ -d "$BUILD_DIR" ]]; then rm -r "$BUILD_DIR"; fi
 
 DIST_DIR="${PRJ_HOME}/dist"
 if [[ -d "$DIST_DIR" ]]; then rm -r "$DIST_DIR"; fi
+
+SITE_DIR="${PRJ_HOME}/site/public"
+if [[ -d "$SITE_DIR" ]]; then rm -r "$SITE_DIR"; fi

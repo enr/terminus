@@ -1,0 +1,71 @@
+name: site
+
+# Builds the documentation site (docs/ and README.md through site/) on every change to it, and
+# publishes it to GitHub Pages from master. Pages must use "GitHub Actions" as its source
+# (Settings → Pages).
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'docs/**'
+      - 'site/**'
+      - 'README.md'
+      - '.sdlc/site'
+      - '.github/workflows/site.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'site/**'
+      - 'README.md'
+      - '.sdlc/site'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HUGO_VERSION: 0.147.9
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Hugo
+        run: |
+          curl -sSLf -o "${RUNNER_TEMP}/hugo.tar.gz" \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-amd64.tar.gz"
+          tar -xzf "${RUNNER_TEMP}/hugo.tar.gz" -C "${RUNNER_TEMP}" hugo
+          echo "${RUNNER_TEMP}" >> "$GITHUB_PATH"
+      - name: Configure Pages
+        id: pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+      - name: Build
+        run: .sdlc/site ${{ steps.pages.outputs.base_url && format('--baseURL {0}/', steps.pages.outputs.base_url) || '' }}
+      - name: Upload
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/public
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

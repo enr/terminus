@@ -1,0 +1,8 @@
+{{- /* The path of the page's Markdown file in the repository. */ -}}
+{{- $p := "" -}}
+{{- if .IsHome -}}
+  {{- $p = "README.md" -}}
+{{- else if .File -}}
+  {{- $p = .File.Path -}}
+{{- end -}}
+{{- return $p -}}

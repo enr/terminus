@@ -165,3 +165,8 @@ Use the scripts in the `.sdlc/` directory.
   release workflow, which publishes the `dist/` archives (as a prerelease when the version
   contains `-`).
 - Update dependencies: `.sdlc/update`
+- Documentation site: the Markdown files in `docs/` (and this README as the home page) are also
+  a [Hugo](https://gohugo.io/) site, configured in `site/`. Preview it with `.sdlc/site serve`,
+  build it in `site/public` with `.sdlc/site`; the `site` GitHub workflow publishes it to GitHub
+  Pages from `master`. The pages need no front matter: the title is the first `#` heading, and
+  links between `.md` files work both on GitHub and on the site.

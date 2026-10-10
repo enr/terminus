@@ -1,0 +1,7 @@
+{{- /* The title of a page is the first "# " heading of its Markdown: the files of docs/ have no
+       front matter. Hugo's own title (from the file name) is the fallback. */ -}}
+{{- $t := .Title -}}
+{{- with findRESubmatch `(?m)^#[ \t]+(.+?)[ \t]*$` .RawContent 1 -}}
+  {{- $t = index (index . 0) 1 -}}
+{{- end -}}
+{{- return $t -}}

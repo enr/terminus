@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Builds the documentation site (docs/ and README.md, see site/hugo.toml) into site/public.
+# "serve" previews it instead: .sdlc/site serve
+# Extra arguments go to hugo, e.g. --baseURL https://example.org/terminus/
+
+set -e
+
+TOOL_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$TOOL_SOURCE" ] ; do TOOL_SOURCE="$(readlink "$TOOL_SOURCE")"; done
+SDLC_DIR="$( cd -P "$( dirname "$TOOL_SOURCE" )" && pwd )"
+PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
+
+cd "${PRJ_HOME}"
+
+command -v hugo >/dev/null || {
+  echo "hugo not installed: https://gohugo.io/installation/"
+  exit 1
+}
+
+if [[ "$1" == "serve" ]]; then
+  shift
+  exec hugo server --source site "$@"
+fi
+
+echo "--- hugo"
+hugo --source site --gc --minify --cleanDestinationDir "$@"
