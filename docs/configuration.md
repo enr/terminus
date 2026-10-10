@@ -16,6 +16,14 @@ lower layer's patterns for another one, but it replaces the whole array for the 
 `--config path` bypasses all three layers and reads exactly that file instead (and then the file
 must exist).
 
+The configuration decides what terminus runs (the external modules directory, the quadlet
+generator, the environment of the backup tools), so every file read, a layer or `--config`, must be
+owned by root or by the user running terminus and not be writable by group or others, and the same
+holds for its directory; otherwise terminus refuses to start. As root, a `./terminus.toml` left by
+another user in the current directory, or one in a directory anyone can write to such as `/tmp`, is
+an error rather than code run as root. A configured `[modules.quadlet] binary` is checked the same
+way.
+
 `terminus config example` prints a file with every module and threshold commented out at its
 default; `terminus config validate` checks the effective (merged) configuration, or a single file
 with `--config`. `terminus config show` lists the files considered (found or not) and prints the

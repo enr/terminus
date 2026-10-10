@@ -165,6 +165,11 @@ func runHost(ctx context.Context, rn runner.Runner, host string, o Options) Resu
 			"cache directory must never be the one a sudo rule allows to run as root, since that " +
 			"user could replace it")
 	}
+	if o.Sudo && o.RemoteConfig != "" {
+		return fail("--sudo cannot be used with --remote-config: the configuration decides what " +
+			"terminus runs, and one copied into the ssh user's own cache directory could be " +
+			"replaced by that user; install it on the hosts as root instead")
+	}
 	t, err := parseHost(host)
 	if err != nil {
 		return fail("%v", err)
@@ -215,12 +220,15 @@ func runHost(ctx context.Context, rn runner.Runner, host string, o Options) Resu
 		cmd = append(cmd, "--config", cfg)
 	}
 	cmd = append(cmd, o.Args...)
+	line := shellJoin(cmd)
 	if o.Sudo {
-		cmd = append([]string{"sudo", "-n"}, cmd...)
+		// From /, not the ssh user's home: the per-run ./terminus.toml layer must not be a file
+		// that user wrote (terminus refuses it as root anyway, failing the run).
+		line = "cd / && sudo -n " + line
 	}
 
 	// 3. The report. Exit codes 0-2 carry a report; 3 is an error of the remote terminus.
-	r, err := rn.Run(ctx, o.ssh(t, shellJoin(cmd), nil))
+	r, err := rn.Run(ctx, o.ssh(t, line, nil))
 	if err != nil {
 		return fail("run: %v", err)
 	}
@@ -267,8 +275,11 @@ func upload(ctx context.Context, rn runner.Runner, o Options, t target, local, p
 	}
 	defer f.Close()
 	tmp := path + ".tmp"
-	script := fmt.Sprintf("mkdir -p %s && cat > %s && chmod 755 %s && mv %s %s",
-		shellQuote(filepath.Dir(path)), shellQuote(tmp), shellQuote(tmp), shellQuote(tmp), shellQuote(path))
+	// The directory is made private: the remote terminus refuses a configuration in a directory
+	// others can write to (a umask of 002 would leave it group-writable).
+	dir := shellQuote(filepath.Dir(path))
+	script := fmt.Sprintf("mkdir -p %s && chmod 700 %s && cat > %s && chmod 755 %s && mv %s %s",
+		dir, dir, shellQuote(tmp), shellQuote(tmp), shellQuote(tmp), shellQuote(path))
 	if _, err := run(ctx, rn, o.ssh(t, script, f)); err != nil {
 		return false, err
 	}

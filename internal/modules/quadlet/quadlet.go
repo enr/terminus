@@ -26,6 +26,7 @@ import (
 	"github.com/enr/terminus/internal/hostfs"
 	"github.com/enr/terminus/internal/module"
 	"github.com/enr/terminus/internal/runner"
+	"github.com/enr/terminus/internal/safeexec"
 	"github.com/enr/terminus/internal/users"
 )
 
@@ -240,6 +241,13 @@ func (m *Module) Collect(ctx context.Context, env *module.Env) (any, error) {
 	bin := m.findBinary()
 	if bin == "" {
 		return nil, module.Skip("quadlet generator not found (podman < 4.4?)")
+	}
+	if m.binary != "" {
+		// A configured generator runs as root for the rootful scope: it must be one only root or
+		// the terminus user could have placed there, as for external modules.
+		if err := safeexec.Check(bin, filepath.Dir(bin)); err != nil {
+			return nil, fmt.Errorf("binary not trusted: %w", err)
+		}
 	}
 	scopes, err := m.resolver.Scopes(m.users, m.rootful)
 	f := &Facts{Binary: bin, Scopes: make([]Scope, len(scopes))}

@@ -66,6 +66,13 @@ and in `/etc/sudoers.d/terminus`:
 ops ALL=(root) NOPASSWD: /usr/local/bin/terminus
 ```
 
+With `--sudo` the remote terminus runs from `/`, so that the ssh user's home is not the per-run
+configuration layer, and `--remote-config` is refused: a configuration copied into the ssh user's
+cache directory could be replaced by that user, and the configuration decides what terminus runs.
+Install the configuration on the hosts as root (`/etc/terminus/terminus.toml`) instead. For the
+same reason a root terminus refuses any configuration file the ssh user could write, also one given
+with `-- --config`.
+
 As root, terminus inspects the systemd user managers and the rootless containers of every user
 with linger (see `users` in [configuration.md](configuration.md)).
 

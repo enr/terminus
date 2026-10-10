@@ -1,5 +1,5 @@
 // Package safeexec checks that a file terminus is about to run or read as trusted input (an
-// external module, a custom fact) is one only a trusted user could have placed there. Without
+// external module, a custom fact, the configuration) is one only a trusted user could have placed there. Without
 // this, any local user able to create a file in the external modules or facts directory (a
 // shared mount, a misconfigured permission somewhere else) could have terminus run arbitrary
 // code, often as root, or feed it fabricated facts.

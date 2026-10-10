@@ -364,3 +364,37 @@ func TestParseDuration(t *testing.T) {
 		}
 	}
 }
+
+func TestUntrustedConfig(t *testing.T) {
+	// The configuration decides what terminus runs: a file, or a directory, someone else can
+	// write to is refused, both alone and as a layer.
+	dir := t.TempDir()
+	p := filepath.Join(dir, "terminus.toml")
+	if err := os.WriteFile(p, []byte("timeout = \"1m\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(p, 0o666); err != nil { // WriteFile applies umask; force the mode
+		t.Fatal(err)
+	}
+	if _, err := Load(p, true); err == nil || !strings.Contains(err.Error(), "not trusted") {
+		t.Errorf("world-writable file: %v", err)
+	}
+	if _, err := Merge([]string{p}); err == nil || !strings.Contains(err.Error(), "not trusted") {
+		t.Errorf("world-writable layer: %v", err)
+	}
+
+	open := t.TempDir()
+	if err := os.Chmod(open, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	q := filepath.Join(open, "terminus.toml")
+	if err := os.WriteFile(q, []byte("timeout = \"1m\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(q, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadHierarchy([]string{q}); err == nil || !strings.Contains(err.Error(), "not trusted") {
+		t.Errorf("layer in a world-writable directory: %v", err)
+	}
+}

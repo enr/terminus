@@ -99,6 +99,11 @@ Start of terminus v2: facts plus checks on them, organized in modules (see `docs
 - v1 flags (`-format`, `-http`, `-version`, ...) keep working.
 
 ### Fixed
+- A configuration file someone else could write (a `./terminus.toml` in the current directory, a
+  file or directory writable by group or others) was loaded, letting its author run code as the
+  terminus user, often root, through `modules_dir`, `[modules.quadlet] binary` or a backup
+  `env_file`: such a file is now refused, as is an untrusted configured quadlet binary.
+  `remote --sudo` runs from `/` and refuses `--remote-config`.
 - Memory and swap sizes were wrong on systems where sysinfo reports them in units larger than a byte.
 - Block device I/O counters were always zero on kernels with 15/17-field `stat` files.
 - A missing or unreadable DMI file (serial numbers as non-root) emptied all the DMI facts.
