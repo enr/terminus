@@ -2,7 +2,8 @@
 
 Get facts about a Linux machine and check them. Parallel execution, structured output, remote API.
 
-terminus v2 is being built: the design is in [docs/design-v2.md](docs/design-v2.md).
+terminus v2 is being built; [docs/design-v2.md](docs/design-v2.md) is the original plan (in Italian),
+kept for history: this README and the documentation in `docs/` describe what terminus does today.
 
 ## Install
 
@@ -30,6 +31,7 @@ terminus checks list      checks with their effective thresholds
 terminus config example   a commented terminus.toml with every setting
 terminus config validate  check the configuration
 terminus config show      the files considered and the merged configuration
+terminus completion bash  shell completion (also zsh, fish, powershell)
 terminus version
 ```
 
@@ -94,7 +96,7 @@ $ terminus memory.available_bytes
 $ terminus network.interfaces.eth0.addresses.0.ip
 10.0.2.15
 $ terminus storage.filesystems./.used_ratio
-0.2301
+0.2501047164976496
 ```
 
 A section is printed as text on a terminal (JSON when piped, `-o` to choose):

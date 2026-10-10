@@ -1,6 +1,7 @@
 # Output formats
 
-Every command that prints a report takes `-o`/`--output` and `--output-file`:
+`facts`, `check`, `report` and `probe` take `-o`/`--output` and `--output-file` (`diff` and `remote`
+have their own `-o` with text, markdown and json, and write to the standard output):
 
 | Format | For | Content |
 |---|---|---|

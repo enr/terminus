@@ -89,7 +89,8 @@ nothing.
 
 `--remote-config terminus.toml` copies a configuration (cached by hash like the binary) and runs
 the remote terminus with `--config` on it; without it each host uses its own
-`/etc/terminus/terminus.toml`, if any. The arguments after `--` go to the remote `terminus report`:
+configuration layers, as a local run would (see [configuration.md](configuration.md)): with
+`--sudo` the system one, `/etc/terminus/terminus.toml`. The arguments after `--` go to the remote `terminus report`:
 `-- --only memory,storage`, `-- --users apps`, `-- --modules podman,quadlet`.
 
 ## Saving and comparing

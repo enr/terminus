@@ -76,6 +76,6 @@ disableKinds = ["taxonomy", "term", "RSS"]
     pageRef = "/docs/api"
     weight = 80
   [[menus.main]]
-    name = "Design v2 (it)"
+    name = "Design history (it)"
     pageRef = "/docs/design-v2"
     weight = 90

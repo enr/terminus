@@ -1,5 +1,10 @@
 # terminus v2 — stato completo di una macchina Linux (fatti + controlli)
 
+> **Historical document.** This is the original plan for terminus v2, in Italian, kept as it was
+> written. The implementation differs in many details (package layout, how podman and systemd
+> are read, check IDs): the README and the other documents in `docs/` describe terminus as it is.
+> `terminus checks list` and `terminus modules list` give the current checks and modules.
+
 ## Context
 
 Oggi `terminus` (Go, 2015, go 1.13 + vendor/) raccoglie fatti base in parallelo (uname, os-release,

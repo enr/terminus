@@ -49,7 +49,7 @@ enabled = false
 
 [checks]
 # Checks whose findings are dropped: IDs or prefixes.
-disable = ["net.public-listeners", "rsync.*"]
+disable = ["net.public-listeners", "updates.*"]
 
 # Thresholds: both warn and fail.
 [checks.thresholds."disk.usage"]
@@ -91,8 +91,9 @@ direction of the check: for `mem.available` and `http.tls-expiry` lower values a
 |---|---|
 | ratio | between 0 and 1 (0.85 = 85%) |
 | percent | between 0 and 100 (pressure stall information) |
-| seconds, days | durations |
+| seconds, hours, days | durations |
 | load per cpu | load average divided by the logical CPUs |
+| restarts, packages, lines per day | counts |
 
 ## Command line
 

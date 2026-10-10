@@ -27,8 +27,12 @@ $ curl -X POST http://$SERVER_IP:8080/facts
 #### Get a single fact
 
 ```shell
-$ curl http://$SERVER_IP:8080/facts -d 'System.MachineID'
+$ curl http://$SERVER_IP:8080/facts -d 'system.machine_id'
 ```
+
+The path is the same as for `terminus facts`: module name and snake_case keys
+(`memory.available_bytes`, `network.interfaces.eth0`). The Go field names (`.System.MachineID`)
+are only for `--format` templates.
 
 A path that does not exist returns `404`.
 
