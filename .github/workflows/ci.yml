@@ -2,8 +2,12 @@ name: ci
 
 on:
   push:
-    branches: [master, main]
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,5 +26,20 @@ jobs:
         run: go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
       - name: Check
         run: .sdlc/check
+
+  dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
       - name: Build distribution
         run: .sdlc/build-dist
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminus-dist
+          path: dist/

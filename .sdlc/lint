@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -e
+
+TOOL_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$TOOL_SOURCE" ] ; do TOOL_SOURCE="$(readlink "$TOOL_SOURCE")"; done
+SDLC_DIR="$( cd -P "$( dirname "$TOOL_SOURCE" )" && pwd )"
+PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
+
+cd "${PRJ_HOME}"
+
+echo "--- gofmt"
+unformatted="$(gofmt -l cmd internal)"
+[[ -z "$unformatted" ]] || {
+  echo "files not formatted:"
+  echo "$unformatted"
+  exit 1
+}
+
+echo "--- go vet"
+go vet ./...
+
+if command -v staticcheck >/dev/null; then
+  echo "--- staticcheck"
+  staticcheck ./...
+else
+  echo "--- skipped: staticcheck not installed (go install honnef.co/go/tools/cmd/staticcheck@latest)"
+fi

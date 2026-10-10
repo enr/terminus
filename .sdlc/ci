@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -e
+
+TOOL_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$TOOL_SOURCE" ] ; do TOOL_SOURCE="$(readlink "$TOOL_SOURCE")"; done
+SDLC_DIR="$( cd -P "$( dirname "$TOOL_SOURCE" )" && pwd )"
+PRJ_HOME="$( cd -P "$( dirname "$SDLC_DIR" )" && pwd )"
+
+cd "${PRJ_HOME}"
+
+echo "--- go build"
+go build ./...
+
+echo "--- go test"
+set +e
+test_output=$(go test -count=1 -v ./... 2>&1)
+test_exit=$?
+set -e
+echo "$test_output" | grep -E "^(ok|FAIL|---)"
+total=$(echo "$test_output" | grep -c "^--- " || true)
+if [ $test_exit -ne 0 ]; then
+  echo "FAILED, full output:"
+  echo "$test_output"
+  exit $test_exit
+fi
+echo "ok (${total} tests)"
