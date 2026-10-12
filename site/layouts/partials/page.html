@@ -1,0 +1,17 @@
+<article class="doc">
+  {{ .Content }}
+</article>
+{{- $menu := site.Menus.main }}
+{{- $i := -1 }}
+{{- range $n, $e := $menu }}{{ if $.IsMenuCurrent "main" $e }}{{ $i = $n }}{{ end }}{{ end }}
+<nav class="pager" aria-label="Pages">
+  {{- if gt $i 0 }}{{ with index $menu (sub $i 1) }}
+  <a class="prev" href="{{ .URL }}"><span>Previous</span>{{ .Name }}</a>
+  {{- end }}{{ end }}
+  {{- if and (ge $i 0) (lt (add $i 1) (len $menu)) }}{{ with index $menu (add $i 1) }}
+  <a class="next" href="{{ .URL }}"><span>Next</span>{{ .Name }}</a>
+  {{- end }}{{ end }}
+</nav>
+{{- with partial "source-path.html" . }}
+<p class="edit"><a href="{{ site.Params.repo }}/edit/{{ site.Params.branch }}/{{ . }}">Edit this page on GitHub</a></p>
+{{- end }}

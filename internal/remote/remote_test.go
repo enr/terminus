@@ -56,8 +56,8 @@ func TestRunHosts(t *testing.T) {
 		// arm: arm64 on port 2222, binary copied, failures.
 		sshKey("arm", "2222", probeCmd):                           {Stdout: []byte("aarch64\n/root\n")},
 		sshKey("arm", "2222", "sha256sum "+armBin+" 2>/dev/null"): {ExitCode: 1},
-		sshKey("arm", "2222", "mkdir -p /root/.cache/terminus && cat > "+armBin+".tmp && chmod 755 "+armBin+".tmp && mv "+armBin+".tmp "+armBin): {},
-		sshKey("arm", "2222", armBin+" report -o json --color never --only systemd"):                                                             {Stdout: reportJSON(t, model.SeverityFail), ExitCode: 2},
+		sshKey("arm", "2222", "mkdir -p /root/.cache/terminus && chmod 700 /root/.cache/terminus && cat > "+armBin+".tmp && chmod 755 "+armBin+".tmp && mv "+armBin+".tmp "+armBin): {},
+		sshKey("arm", "2222", armBin+" report -o json --color never --only systemd"):                                                                                                {Stdout: reportJSON(t, model.SeverityFail), ExitCode: 2},
 		// weird: unsupported architecture.
 		sshKey("weird", "", probeCmd): {Stdout: []byte("riscv64\n/root\n")},
 		// down: ssh fails.
@@ -136,7 +136,7 @@ func TestRemoteSudoRequiresRemoteBinary(t *testing.T) {
 	o, _, _ := setup(t)
 	r := &runner.Fake{Results: map[string]runner.Result{
 		sshKey("h", "", probeCmd): {Stdout: []byte("x86_64\n/root\n")},
-		sshKey("h", "", "sudo -n /usr/local/bin/terminus report -o json --color never"): {Stdout: reportJSON(t, model.SeverityOK)},
+		sshKey("h", "", "cd / && sudo -n /usr/local/bin/terminus report -o json --color never"): {Stdout: reportJSON(t, model.SeverityOK)},
 	}}
 	o.Sudo, o.RemoteBinary = true, "/usr/local/bin/terminus"
 	if res := Run(context.Background(), r, []string{"h"}, o); res[0].Error != "" {
@@ -154,6 +154,19 @@ func TestRemoteSudoRequiresRemoteBinary(t *testing.T) {
 	}
 	if len(r2.Calls) != 0 {
 		t.Errorf("ssh was called before the check: %v", r2.Calls)
+	}
+
+	// --remote-config would be copied into the ssh user's cache directory too, and the
+	// configuration decides what terminus runs: refused with --sudo.
+	o3, _, _ := setup(t)
+	r3 := &runner.Fake{}
+	o3.Sudo, o3.RemoteBinary, o3.RemoteConfig = true, "/usr/local/bin/terminus", "terminus.toml"
+	res = Run(context.Background(), r3, []string{"h"}, o3)
+	if !strings.Contains(res[0].Error, "--sudo cannot be used with --remote-config") {
+		t.Errorf("error = %q, want the --remote-config refusal", res[0].Error)
+	}
+	if len(r3.Calls) != 0 {
+		t.Errorf("ssh was called before the check: %v", r3.Calls)
 	}
 }
 

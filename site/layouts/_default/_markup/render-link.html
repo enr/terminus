@@ -1,0 +1,27 @@
+{{- /* Links are written for GitHub: relative to the Markdown file, to other .md files and to
+       files of the repository. A link to a page of the site goes to that page (anchor kept), a
+       link to any other file of the repository goes to it on GitHub. */ -}}
+{{- $dest := .Destination -}}
+{{- $u := urls.Parse $dest -}}
+{{- $href := $dest -}}
+{{- $external := $u.IsAbs -}}
+{{- if and (not $u.IsAbs) (ne $u.Path "") (not (hasPrefix $u.Path "/")) -}}
+  {{- $base := "." -}}
+  {{- with .Page.File }}{{ $base = path.Dir .Path }}{{ end -}}
+  {{- $p := path.Join $base $u.Path -}}
+  {{- $frag := cond (ne $u.Fragment "") (printf "#%s" $u.Fragment) "" -}}
+  {{- $target := false -}}
+  {{- if eq $p "README.md" -}}
+    {{- $target = site.Home -}}
+  {{- else if strings.HasSuffix $p ".md" -}}
+    {{- $target = site.GetPage (printf "/%s" (strings.TrimSuffix ".md" $p)) -}}
+  {{- end -}}
+  {{- with $target -}}
+    {{- $href = printf "%s%s" .RelPermalink $frag -}}
+  {{- else -}}
+    {{- $href = printf "%s/blob/%s/%s%s" site.Params.repo site.Params.branch $p $frag -}}
+    {{- $external = true -}}
+  {{- end -}}
+{{- end -}}
+<a href="{{ $href | safeURL }}"{{ with .Title }} title="{{ . }}"{{ end }}{{ if $external }} rel="noopener"{{ end }}>{{ .Text | safeHTML }}</a>
+{{- /* */ -}}

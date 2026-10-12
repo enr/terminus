@@ -45,7 +45,7 @@ enabled module (external scripts, backups, TLS dials, ...) on a miss, so an unau
 unthrottled endpoint is a way to overload the machine or the services it checks. Bind to a
 loopback or private address, or put it behind a reverse proxy that authenticates the caller.`,
 		Example: `  terminus serve --http :6060
-  curl -d System.Hostname localhost:6060/facts
+  curl -d system.hostname localhost:6060/facts
   curl localhost:6060/report | jq .summary`,
 		Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {

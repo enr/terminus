@@ -34,6 +34,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/enr/terminus/internal/module"
+	"github.com/enr/terminus/internal/safeexec"
 )
 
 // DefaultPath is where terminus looks for its configuration.
@@ -82,6 +83,9 @@ func Load(path string, required bool) (*Config, error) {
 		return c, nil
 	}
 	if err != nil {
+		return nil, err
+	}
+	if err := checkTrusted(path); err != nil {
 		return nil, err
 	}
 	if err := c.parse(string(data)); err != nil {
@@ -169,6 +173,9 @@ func Merge(paths []string) (*Merged, error) {
 		if err != nil {
 			return nil, err
 		}
+		if err := checkTrusted(p); err != nil {
+			return nil, err
+		}
 		var t map[string]any
 		if _, err := toml.Decode(string(data), &t); err != nil {
 			return nil, fmt.Errorf("%s: %w", p, err)
@@ -222,6 +229,21 @@ func (m *Merged) TOML() (string, error) {
 		out.WriteString(l)
 	}
 	return out.String(), nil
+}
+
+// checkTrusted refuses a configuration file that someone other than root or the terminus user
+// could have written: the configuration decides what terminus runs (external modules directory,
+// the quadlet generator, the environment of the backup tools), so a terminus.toml dropped in the
+// current directory, or in a directory anyone can write to, would otherwise run code as the
+// terminus user, often root.
+func checkTrusted(path string) error {
+	if abs, err := filepath.Abs(path); err == nil {
+		path = abs
+	}
+	if err := safeexec.Check(path, filepath.Dir(path)); err != nil {
+		return fmt.Errorf("configuration %s not trusted: %w", path, err)
+	}
+	return nil
 }
 
 // mergeTables merges src into dst, recursing into nested tables; any other value (including

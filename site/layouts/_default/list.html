@@ -1,0 +1,12 @@
+{{ define "main" }}
+<article class="doc">
+  <h1>Documentation</h1>
+  <ul class="index">
+    {{- range site.Menus.main }}
+    {{- with .Page }}{{ if not .IsHome }}
+    <li><a href="{{ .RelPermalink }}">{{ partial "title.html" . }}</a></li>
+    {{- end }}{{ end }}
+    {{- end }}
+  </ul>
+</article>
+{{ end }}
