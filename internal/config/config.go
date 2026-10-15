@@ -23,6 +23,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -78,14 +79,11 @@ type Config struct {
 // (the path was given explicitly); otherwise it yields the defaults.
 func Load(path string, required bool) (*Config, error) {
 	c := &Config{Enabled: map[string]bool{}}
-	data, err := os.ReadFile(path)
+	data, err := readTrusted(path)
 	if errors.Is(err, os.ErrNotExist) && !required {
 		return c, nil
 	}
 	if err != nil {
-		return nil, err
-	}
-	if err := checkTrusted(path); err != nil {
 		return nil, err
 	}
 	if err := c.parse(string(data)); err != nil {
@@ -165,15 +163,12 @@ type Merged struct {
 func Merge(paths []string) (*Merged, error) {
 	m := &Merged{Table: map[string]any{}}
 	for _, p := range paths {
-		data, err := os.ReadFile(p)
+		data, err := readTrusted(p)
 		if errors.Is(err, os.ErrNotExist) {
 			m.Layers = append(m.Layers, Layer{Path: p})
 			continue
 		}
 		if err != nil {
-			return nil, err
-		}
-		if err := checkTrusted(p); err != nil {
 			return nil, err
 		}
 		var t map[string]any
@@ -231,19 +226,21 @@ func (m *Merged) TOML() (string, error) {
 	return out.String(), nil
 }
 
-// checkTrusted refuses a configuration file that someone other than root or the terminus user
-// could have written: the configuration decides what terminus runs (external modules directory,
-// the quadlet generator, the environment of the backup tools), so a terminus.toml dropped in the
-// current directory, or in a directory anyone can write to, would otherwise run code as the
-// terminus user, often root.
-func checkTrusted(path string) error {
-	if abs, err := filepath.Abs(path); err == nil {
-		path = abs
+// readTrusted reads a configuration file, refusing one that someone other than root or the
+// terminus user could have written: the configuration decides what terminus runs (external
+// modules directory, the quadlet generator, the environment of the backup tools), so a
+// terminus.toml dropped in the current directory, or in a directory anyone can write to, would
+// otherwise run code as the terminus user, often root. A missing file is an os.ErrNotExist error.
+func readTrusted(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
 	}
-	if err := safeexec.Check(path, filepath.Dir(path)); err != nil {
-		return fmt.Errorf("configuration %s not trusted: %w", path, err)
+	defer f.Close()
+	if err := safeexec.CheckFile(f); err != nil {
+		return nil, fmt.Errorf("configuration %s not trusted: %w", path, err)
 	}
-	return nil
+	return io.ReadAll(f)
 }
 
 // mergeTables merges src into dst, recursing into nested tables; any other value (including

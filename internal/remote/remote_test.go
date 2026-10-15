@@ -67,7 +67,7 @@ func TestRunHosts(t *testing.T) {
 	// since it would otherwise let sudo -n run a binary the ssh user just copied into their own
 	// cache directory.
 	o.Args = []string{"--only", "systemd"}
-	res := Run(context.Background(), r, []string{"apps@srv-01", "arm:2222", "weird", "down"}, o)
+	res, _ := Run(context.Background(), r, []string{"apps@srv-01", "arm:2222", "weird", "down"}, o)
 
 	if res[0].Error != "" || res[0].Copied || res[0].ExitCode() != model.ExitWarn || res[0].Arch != "x86_64" {
 		t.Errorf("srv-01: %+v", res[0])
@@ -107,25 +107,25 @@ func TestRemoteBinaryConfigAndErrors(t *testing.T) {
 		sshKey("h", "", "/usr/local/bin/terminus report -o json --color never --config "+cfgPath+" --users 'a b'"): {Stdout: []byte("not json"), Stderr: []byte("oops")},
 	}}
 	o.RemoteBinary, o.RemoteConfig, o.Args = "/usr/local/bin/terminus", cfg, []string{"--users", "a b"}
-	res := Run(context.Background(), r, []string{"h"}, o)
+	res, _ := Run(context.Background(), r, []string{"h"}, o)
 	if !strings.Contains(res[0].Error, "invalid report") || !strings.Contains(res[0].Error, "oops") {
 		t.Errorf("result: %+v", res[0])
 	}
 
 	r.Results[sshKey("h", "", "/usr/local/bin/terminus report -o json --color never --config "+cfgPath+" --users 'a b'")] = runner.Result{ExitCode: 3, Stderr: []byte("invalid configuration")}
-	if res := Run(context.Background(), r, []string{"h"}, o); !strings.Contains(res[0].Error, "exit code 3: invalid configuration") {
+	if res, _ := Run(context.Background(), r, []string{"h"}, o); !strings.Contains(res[0].Error, "exit code 3: invalid configuration") {
 		t.Errorf("remote error: %+v", res[0])
 	}
 
 	o2, _, _ := setup(t)
 	o2.Executable = func() (string, error) { return "", errors.New("no exe") }
 	r2 := &runner.Fake{Results: map[string]runner.Result{sshKey("h", "", probeCmd): {Stdout: []byte("x86_64\n/root\n")}}}
-	if res := Run(context.Background(), r2, []string{"h"}, o2); !strings.Contains(res[0].Error, "no exe") {
+	if res, _ := Run(context.Background(), r2, []string{"h"}, o2); !strings.Contains(res[0].Error, "no exe") {
 		t.Errorf("no executable: %+v", res[0])
 	}
 	o3, _, _ := setup(t)
 	o3.Arch = "arm64" // local arm64: an amd64 host needs terminus-linux-amd64
-	if res := Run(context.Background(), r2, []string{"h"}, o3); !strings.Contains(res[0].Error, "terminus-linux-amd64") {
+	if res, _ := Run(context.Background(), r2, []string{"h"}, o3); !strings.Contains(res[0].Error, "terminus-linux-amd64") {
 		t.Errorf("missing binary: %+v", res[0])
 	}
 }
@@ -139,34 +139,29 @@ func TestRemoteSudoRequiresRemoteBinary(t *testing.T) {
 		sshKey("h", "", "cd / && sudo -n /usr/local/bin/terminus report -o json --color never"): {Stdout: reportJSON(t, model.SeverityOK)},
 	}}
 	o.Sudo, o.RemoteBinary = true, "/usr/local/bin/terminus"
-	if res := Run(context.Background(), r, []string{"h"}, o); res[0].Error != "" {
+	if res, _ := Run(context.Background(), r, []string{"h"}, o); res[0].Error != "" {
 		t.Errorf("sudo with --remote-binary: %+v", res[0])
 	}
 
 	// Without --remote-binary, --sudo would run sudo -n on a binary just copied into the ssh
-	// user's own (writable) cache directory: refuse before even connecting.
-	o2, _, _ := setup(t)
-	r2 := &runner.Fake{}
-	o2.Sudo = true
-	res := Run(context.Background(), r2, []string{"h"}, o2)
-	if !strings.Contains(res[0].Error, "--sudo requires --remote-binary") {
-		t.Errorf("error = %q, want the --remote-binary requirement", res[0].Error)
-	}
-	if len(r2.Calls) != 0 {
-		t.Errorf("ssh was called before the check: %v", r2.Calls)
-	}
-
-	// --remote-config would be copied into the ssh user's cache directory too, and the
-	// configuration decides what terminus runs: refused with --sudo.
-	o3, _, _ := setup(t)
-	r3 := &runner.Fake{}
-	o3.Sudo, o3.RemoteBinary, o3.RemoteConfig = true, "/usr/local/bin/terminus", "terminus.toml"
-	res = Run(context.Background(), r3, []string{"h"}, o3)
-	if !strings.Contains(res[0].Error, "--sudo cannot be used with --remote-config") {
-		t.Errorf("error = %q, want the --remote-config refusal", res[0].Error)
-	}
-	if len(r3.Calls) != 0 {
-		t.Errorf("ssh was called before the check: %v", r3.Calls)
+	// user's own (writable) cache directory; --remote-config would be copied there too, and the
+	// configuration decides what terminus runs: both refused before even connecting.
+	for _, tc := range []struct {
+		binary, config, want string
+	}{
+		{"", "", "--sudo requires --remote-binary"},
+		{"/usr/local/bin/terminus", "terminus.toml", "--sudo cannot be used with --remote-config"},
+	} {
+		o2, _, _ := setup(t)
+		r2 := &runner.Fake{}
+		o2.Sudo, o2.RemoteBinary, o2.RemoteConfig = true, tc.binary, tc.config
+		res, err := Run(context.Background(), r2, []string{"h", "h2"}, o2)
+		if err == nil || !strings.Contains(err.Error(), tc.want) || res != nil {
+			t.Errorf("error = %v, results = %v, want %q", err, res, tc.want)
+		}
+		if len(r2.Calls) != 0 {
+			t.Errorf("ssh was called before the check: %v", r2.Calls)
+		}
 	}
 }
 

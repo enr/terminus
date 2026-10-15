@@ -67,7 +67,10 @@ Exit code: the worst among the hosts; 3 when a host cannot be reached or fails.`
 				return fmt.Errorf("unknown output format %q (supported: text, markdown, json)", format)
 			}
 			o.Args = remoteArgs
-			results := remote.Run(cmd.Context(), runner.Exec{}, hosts, o)
+			results, err := remote.Run(cmd.Context(), runner.Exec{}, hosts, o)
+			if err != nil {
+				return err
+			}
 
 			if outputDir != "" {
 				if err := saveReports(outputDir, results); err != nil {
@@ -96,7 +99,7 @@ Exit code: the worst among the hosts; 3 when a host cannot be reached or fails.`
 	f.StringVarP(&format, "output", "o", "text", "output format: text, markdown, json")
 	f.StringVar(&hostsFile, "hosts-file", "", "read more hosts from this file, one per line (# comments)")
 	f.StringVar(&outputDir, "output-dir", "", "save each JSON report in DIR/<host>.json")
-	f.BoolVar(&o.Sudo, "sudo", false, "run the remote terminus with sudo -n (to inspect the managers and containers of every user); requires --remote-binary")
+	f.BoolVar(&o.Sudo, "sudo", false, "run the remote terminus with sudo -n (to inspect the managers and containers of every user); requires --remote-binary, excludes --remote-config")
 	f.StringVar(&o.RemoteBinary, "remote-binary", "", "use this terminus installed on the hosts instead of copying one")
 	f.StringVar(&o.BinariesDir, "binaries-dir", "", "directory with terminus-linux-<arch> for other architectures")
 	f.StringVar(&o.RemoteConfig, "remote-config", "", "copy this terminus.toml to the hosts and use it")

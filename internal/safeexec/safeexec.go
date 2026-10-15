@@ -8,6 +8,7 @@ package safeexec
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 )
 
@@ -22,12 +23,34 @@ func Check(path, dir string) error {
 	return checkOwnerAndPerms(path)
 }
 
+// CheckFile verifies an open file the same way, and the directory it really lives in (after
+// symlinks): the file is checked through its descriptor, so what passes is what is then read
+// from f, even if the path is replaced in between.
+func CheckFile(f *os.File) error {
+	real, err := filepath.EvalSymlinks(f.Name())
+	if err != nil {
+		return err
+	}
+	if err := checkOwnerAndPerms(filepath.Dir(real)); err != nil {
+		return fmt.Errorf("directory %w", err)
+	}
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	return checkInfo(f.Name(), info)
+}
+
 func checkOwnerAndPerms(path string) error {
 	// os.Stat follows symlinks: what is checked is what actually runs or is read, not the link.
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
+	return checkInfo(path, info)
+}
+
+func checkInfo(path string, info os.FileInfo) error {
 	st, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {
 		return nil // not a platform this can be checked on
