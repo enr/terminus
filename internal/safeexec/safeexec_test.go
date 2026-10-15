@@ -50,3 +50,42 @@ func TestCheck(t *testing.T) {
 		t.Error("file in a world-writable directory accepted")
 	}
 }
+
+func TestCheckFile(t *testing.T) {
+	dir := t.TempDir()
+	good := filepath.Join(dir, "good.toml")
+	if err := os.WriteFile(good, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(good)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := CheckFile(f); err != nil {
+		t.Errorf("owned, not group/other writable: %v", err)
+	}
+
+	// A safe file in a directory others can write to, reached through a symlink from a safe
+	// directory: the directory that matters is the one the file really lives in.
+	writableDir := t.TempDir()
+	if err := os.Chmod(writableDir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(writableDir, "target.toml")
+	if err := os.WriteFile(target, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "link.toml")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	l, err := os.Open(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	if err := CheckFile(l); err == nil {
+		t.Error("symlink to a file in a world-writable directory accepted")
+	}
+}

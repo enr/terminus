@@ -73,8 +73,12 @@ func (r Result) ExitCode() int {
 	return r.Report.ExitCode()
 }
 
-// Run processes the hosts and returns their results in the same order.
-func Run(ctx context.Context, rn runner.Runner, hosts []string, o Options) []Result {
+// Run processes the hosts and returns their results in the same order. Invalid options are an
+// error, before any host is contacted.
+func Run(ctx context.Context, rn runner.Runner, hosts []string, o Options) ([]Result, error) {
+	if err := o.validate(); err != nil {
+		return nil, err
+	}
 	if o.SSH == "" {
 		o.SSH = "ssh"
 	}
@@ -105,7 +109,26 @@ func Run(ctx context.Context, rn runner.Runner, hosts []string, o Options) []Res
 		}()
 	}
 	wg.Wait()
-	return out
+	return out, nil
+}
+
+// validate refuses the combinations of options that would let the ssh user decide what runs as
+// root.
+func (o Options) validate() error {
+	if !o.Sudo {
+		return nil
+	}
+	if o.RemoteBinary == "" {
+		return errors.New("--sudo requires --remote-binary: a binary copied into the ssh user's " +
+			"own cache directory must never be the one a sudo rule allows to run as root, since " +
+			"that user could replace it")
+	}
+	if o.RemoteConfig != "" {
+		return errors.New("--sudo cannot be used with --remote-config: the configuration decides " +
+			"what terminus runs, and one copied into the ssh user's own cache directory could be " +
+			"replaced by that user; install it on the hosts as root instead")
+	}
+	return nil
 }
 
 // target is a host as given on the command line: [user@]host[:port].
@@ -159,16 +182,6 @@ func runHost(ctx context.Context, rn runner.Runner, host string, o Options) Resu
 	fail := func(format string, args ...any) Result {
 		res.Error = fmt.Sprintf(format, args...)
 		return res
-	}
-	if o.Sudo && o.RemoteBinary == "" {
-		return fail("--sudo requires --remote-binary: a binary copied into the ssh user's own " +
-			"cache directory must never be the one a sudo rule allows to run as root, since that " +
-			"user could replace it")
-	}
-	if o.Sudo && o.RemoteConfig != "" {
-		return fail("--sudo cannot be used with --remote-config: the configuration decides what " +
-			"terminus runs, and one copied into the ssh user's own cache directory could be " +
-			"replaced by that user; install it on the hosts as root instead")
 	}
 	t, err := parseHost(host)
 	if err != nil {
