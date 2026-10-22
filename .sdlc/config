@@ -3,7 +3,7 @@ REPO_OWNER='enr'
 REPO_NAME='terminus'
 DIST_DIR='dist'
 
-APP_VERSION='0.2.0-dev' # APP_VERSION_AUTOLINE this line is automatically managed
+APP_VERSION='0.2.0' # APP_VERSION_AUTOLINE this line is automatically managed
 
 MODULE="${REPO_HOST}/${REPO_OWNER}/${REPO_NAME}"
 
