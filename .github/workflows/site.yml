@@ -36,6 +36,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
     steps:
       - uses: actions/checkout@v5
       - name: Install Hugo
@@ -48,6 +51,8 @@ jobs:
         id: pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Build
         run: .sdlc/site ${{ steps.pages.outputs.base_url && format('--baseURL {0}/', steps.pages.outputs.base_url) || '' }}
       - name: Upload
